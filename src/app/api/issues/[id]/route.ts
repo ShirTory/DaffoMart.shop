@@ -6,9 +6,9 @@ import type { OrderIssue } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export const PATCH = handle(async (req, { params }: { params: Promise<{ id: string }> }) => {
+export const PATCH = handle(async (req, ctx) => {
   await requireAdmin();
-  const { id } = await params;
+  const { id } = await ctx.params;
   const body = issuePatchSchema.parse(await req.json());
   const cur = await db.get<OrderIssue>("issues", id);
   if (!cur) throw new ApiError(404, "Issue not found");
