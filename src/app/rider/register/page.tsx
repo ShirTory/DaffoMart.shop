@@ -57,7 +57,7 @@ function Photo({ label, file, onPick, error }: { label: string; file: File | nul
 export default function RiderRegister() {
   const [f, setF] = useState<F>(blank); const [front, setFront] = useState<File | null>(null); const [back, setBack] = useState<File | null>(null); const [profile, setProfile] = useState<File | null>(null);
   const [agree, setAgree] = useState(false); const [busy, setBusy] = useState(false); const [err, setErr] = useState(""); const [errs, setErrs] = useState<Record<string, string>>({}); const [done, setDone] = useState(false);
-  const set = (k: keyof F) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
+  const set = (k: keyof F) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setErr(""); setErrs({});
