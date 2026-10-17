@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Icon, Spinner } from "@/components/admin/ui";
 import { EMPLOYEE_ROLES } from "@/lib/types";
@@ -20,6 +20,18 @@ export default function EmployeeRegister() {
   const [ok, setOk] = useState(false);
   const [form, setForm] = useState(blank);
   const [image, setImage] = useState<File | null>(null);
+  // positions come from admin → Website content; /join links here with ?position=<title>
+  const [list, setList] = useState<string[] | null>(null);
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get("position");
+    if (wanted) setForm((f) => ({ ...f, role: wanted }));
+    fetch("/api/settings").then((r) => r.json()).then((d) => {
+      const p = d?.data?.positions;
+      if (Array.isArray(p)) setList(p.filter((x: { kind?: string; active?: boolean; title?: string }) => x.active && x.kind !== "rider" && x.title).map((x: { title: string }) => x.title));
+    }).catch(() => {});
+  }, []);
+  const base: string[] = list ?? EMPLOYEE_ROLES.filter((r) => r !== "Rider");
+  const roles: string[] = form.role && !base.includes(form.role) ? [form.role, ...base] : base;
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -67,7 +79,7 @@ export default function EmployeeRegister() {
             <label className="label">Position / role</label>
             <select className="input" required value={form.role} onChange={set("role")}>
               <option value="">Select…</option>
-              {EMPLOYEE_ROLES.filter((r) => r !== "Rider").map((r) => <option key={r} value={r}>{r}</option>)}
+              {roles.map((r) => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
           <div><label className="label">Department (optional)</label><input className="input" value={form.department} onChange={set("department")} /></div>

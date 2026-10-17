@@ -30,6 +30,8 @@ export interface Offer {
   startsAt?: string; endsAt?: string; active: boolean; createdAt: string;
 }
 
+/** A job opening shown on the public /join page. kind "rider" -> rider application form, "staff" -> staff application form */
+export interface JobPosition { id: string; title: string; kind: "rider" | "staff"; description?: string; active: boolean }
 export interface Feature { icon: string; title: string; text: string; image?: string }
 export interface StoreSettings {
   storeName: string; tagline: string; phone: string; email: string; address: string;
@@ -82,6 +84,8 @@ export interface StoreSettings {
   seoTitle?: string; seoDescription?: string; ogImage?: string; favicon?: string;
   /** invoice look & content */
   invoice?: InvoiceSettings;
+  /** careers: open positions + /join page wording (all editable in admin → Website content) */
+  positions?: JobPosition[]; joinTitle?: string; joinIntro?: string;
 }
 export interface PayDisplay { label?: string; hint?: string; logo?: string; color?: string; order?: number; visible?: boolean }
 export interface InvoiceSettings {

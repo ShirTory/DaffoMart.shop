@@ -9,6 +9,7 @@ const PROMO_H: Record<string, string> = { sm: "h-20 sm:h-24", md: "h-28 sm:h-36"
 
 export default async function Footer({ settings: s, categories }: { settings: StoreSettings; categories: Category[] }) {
   const t = makeT(s.texts);
+  const hiring = (s.positions ?? []).some((p) => p.active && p.title.trim());
   // only methods that really work right now (a gateway that is not connected yet is not shown as a way to pay)
   const payments = s.footerShowPayments === false ? [] : (await paymentOptions(s)).filter((p) => !p.disabled);
   const promo = s.footerPromoShow !== false && s.footerPromoImage ? s.footerPromoImage : "";
@@ -51,6 +52,7 @@ export default async function Footer({ settings: s, categories }: { settings: St
             <li><Link className="hover:text-white" href="/track">{t("footer.track")}</Link></li>
             <li><Link className="hover:text-white" href="/contact">{t("footer.contactInfo")}</Link></li>
             <li><Link className="hover:text-white" href="/policy">{t("footer.policy")}</Link></li>
+            {hiring && <li><Link className="hover:text-white" href="/join">{s.joinTitle || "Join our team"}</Link></li>}
             <li><Link className="hover:text-white" href="/cart">{t("footer.cart")}</Link></li>
             <li><Link className="hover:text-white" href="/checkout">{t("footer.checkout")}</Link></li>
           </ul>

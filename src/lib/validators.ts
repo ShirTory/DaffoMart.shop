@@ -90,6 +90,8 @@ export const settingsSchema = z.object({
   heroSubtitle: z.string().trim().max(240).default(""),
   heroCta: z.string().trim().max(40).default(""),
   features: z.array(z.object({ icon: z.string().trim().max(32).default("check"), title: z.string().trim().max(40), text: z.string().trim().max(80), image: url.optional() })).max(8),
+  positions: z.array(z.object({ id: z.string().trim().min(1).max(40), title: z.string().trim().min(1).max(40), kind: z.enum(["rider", "staff"]).default("staff"), description: z.string().trim().max(240).optional(), active: z.boolean().default(true) })).max(30).optional(),
+  joinTitle: z.string().trim().max(80).optional(), joinIntro: z.string().trim().max(300).optional(),
   payCod: z.boolean(), payBkash: z.boolean(), bkashNumber: z.string().trim().max(30).default(""),
   payNagad: z.boolean(), nagadNumber: z.string().trim().max(30).default(""), payOnline: z.boolean(),
   payInstructions: z.string().trim().max(400).default(""),

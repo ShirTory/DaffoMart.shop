@@ -41,7 +41,7 @@ export default function AdminLogin() {
             <p className="text-sm font-semibold text-gray-800">Rider / Employee?</p>
             <p className="mt-0.5 text-xs text-gray-500">Apply for an account. An admin will approve it before you can sign in.</p>
             <div className="mt-3 grid grid-cols-2 gap-2">
-              <a href="/rider/register" className="btn-primary py-2 text-sm">Register</a>
+              <a href="/join" className="btn-primary py-2 text-sm">Register</a>
               <a href="/rider/login" className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:border-primary hover:text-primary">Rider sign in</a>
             </div>
           </div>
