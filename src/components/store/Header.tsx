@@ -104,9 +104,9 @@ export default function Header({ settings, categories }: { settings: StoreSettin
       {/* Category strip — circular icons + bold labels (no emoji) */}
       <nav className="border-t border-gray-100 bg-white" aria-label="Categories">
         <div className="mx-auto flex max-w-7xl items-start gap-1 overflow-x-auto px-2 py-2.5 sm:gap-2 sm:px-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <CategoryChip href="/products" name={t("header.all")} iconBg="#EEF2FF" />
+          <CategoryChip href="/products" name={t("header.all")} image={settings.navAllImage || undefined} iconBg="#EEF2FF" />
           {settings.showMedicine && (
-            <CategoryChip href="/medicine" name={t("header.medicine")} iconBg="#ECFDF5" />
+            <CategoryChip href="/medicine" name={t("header.medicine")} image={settings.navMedicineImage || undefined} iconBg="#ECFDF5" />
           )}
           {groceryCats.map((c) => (
             <CategoryChip
@@ -117,7 +117,7 @@ export default function Header({ settings, categories }: { settings: StoreSettin
               iconBg={c.iconBg}
             />
           ))}
-          <CategoryChip href="/products?sale=1" name={t("header.offers")} iconBg="#FFF7ED" />
+          <CategoryChip href="/products?sale=1" name={t("header.offers")} image={settings.navOffersImage || undefined} iconBg="#FFF7ED" />
         </div>
       </nav>
     </header>

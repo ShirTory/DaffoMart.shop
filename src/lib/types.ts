@@ -63,7 +63,7 @@ export interface StoreSettings {
   /** floating support buttons */
   supportCallColor?: string; supportWaColor?: string; supportPosition?: string; supportWaMessage?: string;
   /** category icon section on the home page */
-  showCatSection?: boolean; catIconSize?: string; catIconShape?: string; catIconBg?: string; catIconFit?: string; catShowLabels?: boolean; catGap?: string; catLabelColor?: string;
+  navAllImage?: string; navMedicineImage?: string; navOffersImage?: string; showCatSection?: boolean; catIconSize?: string; catIconShape?: string; catIconBg?: string; catIconFit?: string; catShowLabels?: boolean; catGap?: string; catLabelColor?: string;
   /** empty states */
   emptyStateImage?: string; emptyStateBg?: string; emptyStateColor?: string; emptyStateAlign?: string;
   /** payment methods: how each one is displayed */

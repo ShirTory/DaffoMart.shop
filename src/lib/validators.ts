@@ -108,7 +108,7 @@ export const settingsSchema = z.object({
   buttonColor: color, buttonTextColor: color, buttonStyle: pick("solid", "outline", "soft"),
   showBuyNow: z.boolean().optional(), showWishlist: z.boolean().optional(), showCardWhatsapp: z.boolean().optional(), showCardDelivery: z.boolean().optional(),
   supportCallColor: color, supportWaColor: color, supportPosition: pick("right", "left"), supportWaMessage: z.string().trim().max(200).optional(),
-  showCatSection: z.boolean().optional(), catIconSize: pick("sm", "md", "lg"), catIconShape: pick("rounded", "circle", "square"), catIconBg: color, catIconFit: pick("cover", "contain"),
+  navAllImage: url.optional(), navMedicineImage: url.optional(), navOffersImage: url.optional(), showCatSection: z.boolean().optional(), catIconSize: pick("sm", "md", "lg"), catIconShape: pick("rounded", "circle", "square"), catIconBg: color, catIconFit: pick("cover", "contain"),
   catShowLabels: z.boolean().optional(), catGap: pick("sm", "md", "lg"), catLabelColor: color,
   emptyStateImage: url.optional(), emptyStateBg: color, emptyStateColor: color, emptyStateAlign: pick("center", "left"),
   footerPromoShow: z.boolean().optional(), footerPromoHeight: pick("sm", "md", "lg"), footerPromoBg: color, footerPromoAlt: z.string().trim().max(120).optional(), footerPromoFit: pick("cover", "contain"),

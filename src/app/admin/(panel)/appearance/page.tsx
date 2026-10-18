@@ -6,7 +6,7 @@ import type { StoreSettings } from "@/lib/types";
 
 const KEYS: (keyof StoreSettings)[] = ["primaryColor", "accentColor", "secondaryColor", "buttonColor", "buttonTextColor", "buttonStyle", "buttonRadius", "buttonSize", "showBuyNow", "showWishlist", "showCardWhatsapp", "showCardDelivery",
   "showSupportCall", "showSupportWa", "supportCallLabel", "supportWaLabel", "supportCallColor", "supportWaColor", "supportPosition", "supportWaMessage",
-  "showCatSection", "catIconSize", "catIconShape", "catIconBg", "catIconFit", "catShowLabels", "catGap", "catLabelColor",
+  "navAllImage", "navMedicineImage", "navOffersImage", "showCatSection", "catIconSize", "catIconShape", "catIconBg", "catIconFit", "catShowLabels", "catGap", "catLabelColor",
   "footerPromoImage", "footerPromoLink", "footerPromoShow", "footerPromoHeight", "footerPromoBg", "footerPromoAlt", "footerPromoFit", "footerShowPayments", "footerShowCategories",
   "emptyStateIcon", "emptyStateImage", "emptyStateBg", "emptyStateColor", "emptyStateAlign", "seoTitle", "seoDescription", "ogImage", "favicon"];
 
@@ -85,6 +85,7 @@ export default function AppearancePage() {
           {(!f.phone || !f.whatsapp) && <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-900">{!f.phone && "No phone number yet — the Call button stays hidden. "}{!f.whatsapp && "No WhatsApp number yet — the WhatsApp button stays hidden. "}Add them in <a className="font-semibold underline" href="/admin/settings">Settings &amp; Contact</a>.</p>}
         </Sec>
 
+        <Sec title="Top category bar icons" desc="Optional images for the All, Medicine and Offers icons. Empty = letter icon."><div className="grid gap-4 sm:grid-cols-3"><ImageUpload kind="general" label="All icon" aspect="aspect-square" value={f.navAllImage} onChange={(v) => set("navAllImage", v)} hint="Square, e.g. 256x256" /><ImageUpload kind="general" label="Medicine icon" aspect="aspect-square" value={f.navMedicineImage} onChange={(v) => set("navMedicineImage", v)} hint="Square, e.g. 256x256" /><ImageUpload kind="general" label="Offers icon" aspect="aspect-square" value={f.navOffersImage} onChange={(v) => set("navOffersImage", v)} hint="Square, e.g. 256x256" /></div></Sec>
         <Sec title="Home page category icons" desc="Upload each icon image in Admin → Categories.">
           <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("showCatSection")} onChange={tg("showCatSection")} label="Show this section" /><Toggle checked={on("catShowLabels")} onChange={tg("catShowLabels")} label="Show names under icons" /></div>
           <div className="grid gap-4 sm:grid-cols-2">

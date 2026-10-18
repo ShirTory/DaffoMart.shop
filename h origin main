@@ -1,0 +1,229 @@
+[33m0da1c1e[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add /join page with admin-editable job positions
+ src/app/(store)/join/page.tsx          | 43 [32m++++++++++++++++++++++++++++++++[m
+ src/app/admin/(panel)/content/page.tsx | 45 [32m+++++++++++++++++++++++++++++++[m[31m---[m
+ src/app/admin/login/page.tsx           |  2 [32m+[m[31m-[m
+ src/app/employee/register/page.tsx     | 16 [32m++++++++++[m[31m--[m
+ src/components/store/Footer.tsx        |  2 [32m++[m
+ src/lib/types.ts                       |  4 [32m+++[m
+ src/lib/validators.ts                  |  2 [32m++[m
+ src/server/seed.ts                     |  8 [32m++++++[m
+ 8 files changed, 115 insertions(+), 7 deletions(-)
+[33m4c307ad[m Fix rider register select onChange type
+ src/app/rider/register/page.tsx | 2 [32m+[m[31m-[m
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+[33mf9df0b6[m Fix issues route params type
+ src/app/api/issues/[id]/route.ts | 4 [32m++[m[31m--[m
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+[33me77af66[m Fix issues route params type
+ package-lock.json | 3 [32m+++[m
+ 1 file changed, 3 insertions(+)
+[33m281ae3d[m Fix Netlify build - FEATURE_ICON_KEYS import
+ .env.example                                    |   18 [32m+[m
+ .gitignore                                      |   46 [32m+[m
+ DEPLOYMENT.md                                   |   57 [32m+[m
+ FIXES-NOTES.md                                  |   65 [32m+[m
+ GITHUB-NETLIFY.md                               |   66 [32m+[m
+ MERGE-NOTES.md                                  |   17 [32m+[m
+ PAYMENTS.md                                     |   24 [32m+[m
+ README.md                                       |   41 [32m+[m
+ UPGRADE-NOTES.md                                |   48 [32m+[m
+ google6e62fffbdd43fde5.html                     |    1 [32m+[m
+ netlify.toml                                    |   12 [32m+[m
+ next-env.d.ts                                   |    6 [32m+[m
+ next.config.mjs                                 |   24 [32m+[m
+ package-lock.json                               | 4695 [32m+++++++++++++++++++++++[m
+ package.json                                    |   35 [32m+[m
+ postcss.config.mjs                              |    1 [32m+[m
+ public/apple-icon.png                           |  Bin [31m0[m -> [32m33000[m bytes
+ public/favicon.ico                              |  Bin [31m0[m -> [32m8193[m bytes
+ public/google6e62fffbdd43fde5.html              |    1 [32m+[m
+ public/icon-16.png                              |  Bin [31m0[m -> [32m859[m bytes
+ public/icon-192.png                             |  Bin [31m0[m -> [32m42493[m bytes
+ public/icon-32.png                              |  Bin [31m0[m -> [32m2527[m bytes
+ public/icon-48.png                              |  Bin [31m0[m -> [32m4707[m bytes
+ public/icon-512.png                             |  Bin [31m0[m -> [32m251383[m bytes
+ public/icon-mark.png                            |  Bin [31m0[m -> [32m251383[m bytes
+ public/icon-maskable-192.png                    |  Bin [31m0[m -> [32m36814[m bytes
+ public/icon-maskable-512.png                    |  Bin [31m0[m -> [32m218883[m bytes
+ public/icon.png                                 |  Bin [31m0[m -> [32m251383[m bytes
+ public/logo-horizontal.png                      |  Bin [31m0[m -> [32m91733[m bytes
+ public/logo.png                                 |  Bin [31m0[m -> [32m134120[m bytes
+ public/manifest.webmanifest                     |   35 [32m+[m
+ public/og-default.png                           |  Bin [31m0[m -> [32m103173[m bytes
+ push-to-github.ps1                              |   37 [32m+[m
+ src/app/(store)/cart/page.tsx                   |   51 [32m+[m
+ src/app/(store)/checkout/page.tsx               |   10 [32m+[m
+ src/app/(store)/contact/page.tsx                |   34 [32m+[m
+ src/app/(store)/layout.tsx                      |   29 [32m+[m
+ src/app/(store)/loading.tsx                     |   16 [32m+[m
+ src/app/(store)/medicine/page.tsx               |   40 [32m+[m
+ src/app/(store)/orders/page.tsx                 |   79 [32m+[m
+ src/app/(store)/page.tsx                        |  232 [32m++[m
+ src/app/(store)/pay/test/page.tsx               |   29 [32m+[m
+ src/app/(store)/policy/page.tsx                 |   34 [32m+[m
+ src/app/(store)/products/[slug]/page.tsx        |   53 [32m+[m
+ src/app/(store)/products/page.tsx               |  176 [32m+[m
+ src/app/(store)/track/page.tsx                  |    4 [32m+[m
+ src/app/(store)/wishlist/page.tsx               |   52 [32m+[m
+ src/app/admin/(panel)/appearance/page.tsx       |  133 [32m+[m
+ src/app/admin/(panel)/attendance/page.tsx       |   88 [32m+[m
+ src/app/admin/(panel)/categories/page.tsx       |  190 [32m+[m
+ src/app/admin/(panel)/content/page.tsx          |   93 [32m+[m
+ src/app/admin/(panel)/couriers/page.tsx         |   60 [32m+[m
+ src/app/admin/(panel)/covers/page.tsx           |   58 [32m+[m
+ src/app/admin/(panel)/delivery/page.tsx         |   55 [32m+[m
+ src/app/admin/(panel)/employees/page.tsx        |  102 [32m+[m
+ src/app/admin/(panel)/inventory/page.tsx        |   72 [32m+[m
+ src/app/admin/(panel)/invoice-settings/page.tsx |   75 [32m+[m
+ src/app/admin/(panel)/issues/page.tsx           |   91 [32m+[m
+ src/app/admin/(panel)/layout.tsx                |   13 [32m+[m
+ src/app/admin/(panel)/live/page.tsx             |   56 [32m+[m
+ src/app/admin/(panel)/offers/page.tsx           |   69 [32m+[m
+ src/app/admin/(panel)/operations/page.tsx       |   47 [32m+[m
+ src/app/admin/(panel)/orders/page.tsx           |  127 [32m+[m
+ src/app/admin/(panel)/page.tsx                  |   95 [32m+[m
+ src/app/admin/(panel)/payments/page.tsx         |  136 [32m+[m
+ src/app/admin/(panel)/products/page.tsx         |   92 [32m+[m
+ src/app/admin/(panel)/riders/page.tsx           |  146 [32m+[m
+ src/app/admin/(panel)/settings/page.tsx         |  234 [32m++[m
+ src/app/admin/(panel)/texts/page.tsx            |   46 [32m+[m
+ src/app/admin/invoice/[id]/page.tsx             |   22 [32m+[m
+ src/app/admin/login/page.tsx                    |   53 [32m+[m
+ src/app/admin/print/[kind]/[id]/page.tsx        |   73 [32m+[m
+ src/app/api/admin/inventory/route.ts            |   19 [32m+[m
+ src/app/api/admin/operations/route.ts           |   32 [32m+[m
+ src/app/api/admin/riders-pending/route.ts       |    6 [32m+[m
+ src/app/api/admin/stats/route.ts                |    9 [32m+[m
+ src/app/api/admin/system/route.ts               |   31 [32m+[m
+ src/app/api/attendance/route.ts                 |   44 [32m+[m
+ src/app/api/auth/login/route.ts                 |   11 [32m+[m
+ src/app/api/auth/logout/route.ts                |    3 [32m+[m
+ src/app/api/auth/me/route.ts                    |    4 [32m+[m
+ src/app/api/banners/[id]/route.ts               |    3 [32m+[m
+ src/app/api/banners/route.ts                    |    3 [32m+[m
+ src/app/api/categories/[id]/route.ts            |    3 [32m+[m
+ src/app/api/categories/route.ts                 |    3 [32m+[m
+ src/app/api/coupons/validate/route.ts           |   11 [32m+[m
+ src/app/api/couriers/[id]/route.ts              |    3 [32m+[m
+ src/app/api/couriers/route.ts                   |    3 [32m+[m
+ src/app/api/employee/login/route.ts             |   19 [32m+[m
+ src/app/api/employee/logout/route.ts            |    4 [32m+[m
+ src/app/api/employee/me/route.ts                |   32 [32m+[m
+ src/app/api/employee/register/route.ts          |   46 [32m+[m
+ src/app/api/employees/[id]/review/route.ts      |   22 [32m+[m
+ src/app/api/employees/[id]/route.ts             |    3 [32m+[m
+ src/app/api/employees/route.ts                  |    3 [32m+[m
+ src/app/api/health/route.ts                     |   21 [32m+[m
+ src/app/api/issues/[id]/route.ts                |   23 [32m+[m
+ src/app/api/issues/route.ts                     |   60 [32m+[m
+ src/app/api/offers/[id]/route.ts                |    3 [32m+[m
+ src/app/api/offers/route.ts                     |    3 [32m+[m
+ src/app/api/orders/[id]/route.ts                |   28 [32m+[m
+ src/app/api/orders/cancel/route.ts              |   24 [32m+[m
+ src/app/api/orders/my/route.ts                  |   28 [32m+[m
+ src/app/api/orders/route.ts                     |   26 [32m+[m
+ src/app/api/orders/track/route.ts               |   53 [32m+[m
+ src/app/api/payment-methods/[id]/route.ts       |    3 [32m+[m
+ src/app/api/payment-methods/route.ts            |    3 [32m+[m
+ src/app/api/payments/online/callback/route.ts   |   22 [32m+[m
+ src/app/api/payments/online/init/route.ts       |   19 [32m+[m
+ src/app/api/products/[id]/route.ts              |    3 [32m+[m
+ src/app/api/products/route.ts                   |   40 [32m+[m
+ src/app/api/ratings/route.ts                    |   42 [32m+[m
+ src/app/api/rider/attendance/route.ts           |   35 [32m+[m
+ src/app/api/rider/location/route.ts             |   16 [32m+[m
+ src/app/api/rider/login/route.ts                |   19 [32m+[m
+ src/app/api/rider/logout/route.ts               |   10 [32m+[m
+ src/app/api/rider/me/route.ts                   |   38 [32m+[m
+ src/app/api/rider/orders/[id]/route.ts          |   18 [32m+[m
+ src/app/api/rider/orders/route.ts               |    5 [32m+[m
+ src/app/api/rider/register/route.ts             |   52 [32m+[m
+ src/app/api/riders/[id]/nid/[side]/route.ts     |   14 [32m+[m
+ src/app/api/riders/[id]/review/route.ts         |   23 [32m+[m
+ src/app/api/riders/[id]/route.ts                |    3 [32m+[m
+ src/app/api/riders/route.ts                     |    3 [32m+[m
+ src/app/api/settings/route.ts                   |   15 [32m+[m
+ src/app/api/upload/route.ts                     |   17 [32m+[m
+ src/app/api/uploads/[name]/route.ts             |    7 [32m+[m
+ src/app/api/zones/[id]/route.ts                 |    3 [32m+[m
+ src/app/api/zones/route.ts                      |    3 [32m+[m
+ src/app/employee/(panel)/layout.tsx             |    9 [32m+[m
+ src/app/employee/(panel)/page.tsx               |   70 [32m+[m
+ src/app/employee/login/page.tsx                 |   33 [32m+[m
+ src/app/employee/register/page.tsx              |  134 [32m+[m
+ src/app/error.tsx                               |   15 [32m+[m
+ src/app/globals.css                             |   56 [32m+[m
+ src/app/invoice/page.tsx                        |   38 [32m+[m
+ src/app/layout.tsx                              |   43 [32m+[m
+ src/app/not-found.tsx                           |   15 [32m+[m
+ src/app/rider/(panel)/layout.tsx                |    9 [32m+[m
+ src/app/rider/(panel)/page.tsx                  |  173 [32m+[m
+ src/app/rider/login/page.tsx                    |   32 [32m+[m
+ src/app/rider/register/page.tsx                 |  188 [32m+[m
+ src/app/robots.ts                               |   14 [32m+[m
+ src/app/sitemap.ts                              |   27 [32m+[m
+ src/components/admin/AdminShell.tsx             |   84 [32m+[m
+ src/components/admin/ApplicationCV.tsx          |  135 [32m+[m
+ src/components/admin/SalesChart.tsx             |   32 [32m+[m
+ src/components/admin/ui.tsx                     |  221 [32m++[m
+ src/components/admin/useSettingsForm.ts         |   25 [32m+[m
+ src/components/invoice/InvoiceDoc.tsx           |  110 [32m+[m
+ src/components/invoice/PrintBar.tsx             |   14 [32m+[m
+ src/components/maps/LiveMap.tsx                 |  103 [32m+[m
+ src/components/store/AddToCart.tsx              |   73 [32m+[m
+ src/components/store/BottomNav.tsx              |   39 [32m+[m
+ src/components/store/BuyAgain.tsx               |   44 [32m+[m
+ src/components/store/CategoryIcon.tsx           |   63 [32m+[m
+ src/components/store/CheckoutForm.tsx           |  130 [32m+[m
+ src/components/store/CopyCode.tsx               |   10 [32m+[m
+ src/components/store/EmptyState.tsx             |   33 [32m+[m
+ src/components/store/FeatureIcon.tsx            |   80 [32m+[m
+ src/components/store/FilterLayout.tsx           |   46 [32m+[m
+ src/components/store/Footer.tsx                 |   84 [32m+[m
+ src/components/store/Gallery.tsx                |   13 [32m+[m
+ src/components/store/Header.tsx                 |  125 [32m+[m
+ src/components/store/HeroSlider.tsx             |   33 [32m+[m
+ src/components/store/InstallAppPrompt.tsx       |  228 [32m++[m
+ src/components/store/Logo.tsx                   |    7 [32m+[m
+ src/components/store/MedicineBadge.tsx          |    1 [32m+[m
+ src/components/store/MetaPixel.tsx              |   34 [32m+[m
+ src/components/store/NotificationBell.tsx       |   53 [32m+[m
+ src/components/store/ProductCard.tsx            |  100 [32m+[m
+ src/components/store/SupportButtons.tsx         |   41 [32m+[m
+ src/components/store/TextsProvider.tsx          |   15 [32m+[m
+ src/components/store/TrackForm.tsx              |  302 [32m++[m
+ src/components/store/WishlistButton.tsx         |   27 [32m+[m
+ src/lib/api.ts                                  |   27 [32m+[m
+ src/lib/dates.ts                                |    6 [32m+[m
+ src/lib/format.ts                               |   11 [32m+[m
+ src/lib/hooks.ts                                |   51 [32m+[m
+ src/lib/invoice.ts                              |   18 [32m+[m
+ src/lib/lastOrder.ts                            |   34 [32m+[m
+ src/lib/maps.ts                                 |   30 [32m+[m
+ src/lib/rider.ts                                |    3 [32m+[m
+ src/lib/seo.ts                                  |   15 [32m+[m
+ src/lib/site.ts                                 |    7 [32m+[m
+ src/lib/store.ts                                |   30 [32m+[m
+ src/lib/texts.ts                                |  101 [32m+[m
+ src/lib/theme.ts                                |   36 [32m+[m
+ src/lib/types.ts                                |  184 [32m+[m
+ src/lib/useRiderGps.ts                          |   45 [32m+[m
+ src/lib/validators.ts                           |  351 [32m++[m
+ src/lib/wishlist.ts                             |   34 [32m+[m
+ src/middleware.ts                               |   26 [32m+[m
+ src/server/auth.ts                              |   45 [32m+[m
+ src/server/authConfig.ts                        |   10 [32m+[m
+ src/server/crud.ts                              |   62 [32m+[m
+ src/server/db.ts                                |  102 [32m+[m
+ src/server/gateways/test.ts                     |   16 [32m+[m
+ src/server/http.ts                              |   39 [32m+[m
+ src/server/payments.ts                          |   55 [32m+[m
+ src/server/queries.ts                           |   17 [32m+[m
+ src/server/resources.ts                         |  175 [32m+[m
+ src/server/riderAuth.ts                         |   57 [32m+[m
+ src/server/seed.ts                              |  113 [32m+[m
+ src/server/services.ts                          |  225 [32m++[m
+ src/server/storage.ts                           |   68 [32m+[m
+ tailwind.config.ts                              |   17 [32m+[m
+ tsconfig.json                                   |   10 [32m+[m
+ 208 files changed, 14474 insertions(+)
