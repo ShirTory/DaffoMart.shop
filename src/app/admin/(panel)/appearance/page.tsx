@@ -3,11 +3,13 @@ import { ErrorBox, Field, ImageUpload, PageHeader, PageLoader, Spinner, Toggle }
 import { useSettingsForm } from "@/components/admin/useSettingsForm";
 import { BRAND, themeVars, validHex } from "@/lib/theme";
 import AnnouncementBar from "@/components/store/AnnouncementBar";
+import ButtonDesigner from "@/components/admin/ButtonDesigner";
 import type { StoreSettings } from "@/lib/types";
 
 const KEYS: (keyof StoreSettings)[] = [
-  "announcement", "announcementIcon", "announcementLink", "announcementCta", "announcementBg", "announcementColor", "announcementStyle", "announcementSize", "announcementDismissible",
-  "headerTheme", "headerBg", "headerText", "headerSticky", "headerShowCategories", "headerShowOrders", "headerShowTrack", "headerShowContact", "headerSearchStyle", "headerCartStyle", "headerMedicineStyle",
+  "announcement", "announcementIcon", "announcementLink", "announcementCta", "announcementBg", "announcementColor", "announcementStyle", "announcementSize", "announcementDismissible", "announcementSpeed", "announcementWeight", "announcementDirection", "announcementSep",
+  "headerTheme", "headerBg", "headerText", "headerSticky", "headerShowCategories", "headerShowOrders", "headerShowTrack", "headerShowContact", "headerSearchStyle", "headerCartStyle", "headerMedicineStyle", "headerCartBtn", "headerMedicineBtn", "headerLinkBtn",
+  "buttonWeight", "buttonAnim", "buttonShadow", "medCtaShow", "medCtaDevices", "medCtaStyle", "medCtaTitle", "medCtaSubtitle", "medCtaLabel", "medCtaBg", "medCtaBg2", "medCtaText", "medCtaBtn", "catLayout", "catStyle", "catCardBg", "catShowSeeAll",
   "cardImageRatio", "cardStyle", "cardRadius", "cardShowUnit", "cardShowQtyStepper", "cardPriceColor", "pageBg", "pageWidth",
   "primaryColor", "accentColor", "secondaryColor", "buttonColor", "buttonTextColor", "buttonStyle", "buttonRadius", "buttonSize", "showBuyNow", "showWishlist", "showCardWhatsapp", "showCardDelivery",
   "showSupportCall", "showSupportWa", "supportCallLabel", "supportWaLabel", "supportCallColor", "supportWaColor", "supportPosition", "supportWaMessage",
@@ -48,7 +50,7 @@ export default function AppearancePage() {
       <div className="grid gap-5 lg:grid-cols-2">
         <Sec title="Announcement bar" desc="The strip above the header. It automatically uses a colour that stands out from the header, with readable text.">
           <div style={vars} className="-mx-1 overflow-hidden rounded-xl border border-gray-200"><AnnouncementBar settings={{ ...f, announcement: f.announcement || "Your announcement shows here" }} /></div>
-          <Field label="Message" hint="Empty = the bar is hidden" error={errs.announcement}><input className="input" maxLength={200} value={f.announcement ?? ""} placeholder="Free delivery on orders over ৳500 · Cash on delivery available" onChange={(e) => set("announcement", e.target.value)} /></Field>
+          <Field label="Headlines" hint="One headline per line. Empty = the bar is hidden. Several lines run one after another." error={errs.announcement}><textarea className="input min-h-[84px]" maxLength={600} value={f.announcement ?? ""} placeholder={"Free delivery on orders over ৳500\nCash on delivery available"} onChange={(e) => set("announcement", e.target.value)} /></Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Icon (emoji)" hint="Empty = megaphone icon"><input className="input text-center text-lg" maxLength={8} value={f.announcementIcon ?? ""} placeholder="📢" onChange={(e) => set("announcementIcon", e.target.value || undefined)} /></Field>
             <Sel label="Text size" value={f.announcementSize} onChange={(v) => set("announcementSize", v as never)} opts={[["md", "Medium"], ["sm", "Small"], ["lg", "Large"]]} />
@@ -56,7 +58,11 @@ export default function AppearancePage() {
             <Field label="Small button text (optional)" hint="Needs a link, e.g. Shop now"><input className="input" maxLength={30} value={f.announcementCta ?? ""} onChange={(e) => set("announcementCta", e.target.value || undefined)} /></Field>
             <Color label="Background colour" value={f.announcementBg} onChange={sv("announcementBg")} fallback="#0D1A3E" hint="Empty = automatic" />
             <Color label="Text colour" value={f.announcementColor} onChange={sv("announcementColor")} fallback="#FFFFFF" hint="Empty = automatic (readable)" />
-            <Sel label="Style" value={f.announcementStyle} onChange={(v) => set("announcementStyle", v as never)} opts={[["static", "Centred text"], ["marquee", "Scrolling text (good for long messages)"]]} />
+            <Sel label="Movement" value={f.announcementStyle} onChange={(v) => set("announcementStyle", v as never)} opts={[["static", "Still, centred"], ["marquee", "Scrolling headline (news ticker)"], ["bounce", "Back and forth (slides to the end and returns)"], ["rotate", "One headline at a time (needs 2+ lines)"]]} />
+            <Sel label="Speed" value={f.announcementSpeed} onChange={(v) => set("announcementSpeed", v as never)} opts={[["normal", "Normal"], ["slow", "Slow"], ["fast", "Fast"]]} />
+            <Sel label="Text boldness" value={f.announcementWeight} onChange={(v) => set("announcementWeight", v as never)} opts={[["semibold", "Semi-bold"], ["normal", "Normal"], ["bold", "Bold"], ["black", "Extra bold"]]} />
+            <Sel label="Scroll direction" value={f.announcementDirection} onChange={(v) => set("announcementDirection", v as never)} opts={[["left", "Right to left"], ["right", "Left to right"]]} hint="Only for the scrolling style" />
+            <Field label="Separator between headlines" hint="e.g. • or ✦ or |"><input className="input text-center" maxLength={4} value={f.announcementSep ?? ""} placeholder="•" onChange={(e) => set("announcementSep", e.target.value || undefined)} /></Field>
           </div>
           <Toggle checked={on("announcementDismissible", false)} onChange={tg("announcementDismissible", false)} label="Let visitors close the bar (it returns when you change the message)" />
         </Sec>
@@ -70,6 +76,13 @@ export default function AppearancePage() {
             <Sel label="Search box shape" value={f.headerSearchStyle} onChange={(v) => set("headerSearchStyle", v as never)} opts={[["pill", "Pill"], ["box", "Rounded box"]]} />
             <Sel label="Cart button" value={f.headerCartStyle} onChange={(v) => set("headerCartStyle", v as never)} opts={[["accent", "Accent colour (orange)"], ["primary", "Primary colour (navy)"], ["outline", "Outline"]]} />
             <Sel label="Medicine button" value={f.headerMedicineStyle} onChange={(v) => set("headerMedicineStyle", v as never)} opts={[["soft", "Soft green"], ["solid", "Solid green"], ["plain", "Text only"]]} />
+          </div>
+          <div className="space-y-4 border-t pt-4">
+            <p className="text-sm font-bold text-gray-900">Header buttons — full control</p>
+            <p className="-mt-3 text-xs text-gray-500">Colour, size, boldness, shape, animation and shadow for each header button. “Default” keeps the look chosen above.</p>
+            <ButtonDesigner title="Cart button" sample="Cart" themeStyle={vars} value={f.headerCartBtn} onChange={(v) => set("headerCartBtn", v)} preset={{ style: "solid", bg: "rgb(var(--c-accent))", color: "#FFFFFF" }} />
+            <ButtonDesigner title="Medicine button (laptop header)" sample="+ Medicine" themeStyle={vars} value={f.headerMedicineBtn} onChange={(v) => set("headerMedicineBtn", v)} preset={{ style: "soft", bg: "#047857" }} />
+            <ButtonDesigner title="Text links (My orders, Track order, Contact)" sample="My orders" themeStyle={vars} value={f.headerLinkBtn} onChange={(v) => set("headerLinkBtn", v)} preset={{ style: "plain", bg: "#4B5563", weight: "medium" }} />
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 border-t pt-4">
             <Toggle checked={on("headerShowCategories")} onChange={tg("headerShowCategories")} label="Show the category icon strip" />
@@ -115,6 +128,9 @@ export default function AppearancePage() {
             <Sel label="Button style" value={f.buttonStyle} onChange={(v) => set("buttonStyle", v)} opts={[["solid", "Solid (filled)"], ["outline", "Outline"], ["soft", "Soft tint"]]} />
             <Sel label="Button shape" value={f.buttonRadius || "lg"} onChange={(v) => set("buttonRadius", v as never)} opts={[["none", "Square"], ["sm", "Slightly rounded"], ["md", "Rounded"], ["lg", "More rounded"], ["full", "Pill"]]} />
             <Sel label="Button size" value={f.buttonSize || "md"} onChange={(v) => set("buttonSize", v)} opts={[["sm", "Small"], ["md", "Medium"], ["lg", "Large"]]} />
+            <Sel label="Text boldness" value={f.buttonWeight || "semibold"} onChange={(v) => set("buttonWeight", v as never)} opts={[["medium", "Normal"], ["semibold", "Semi-bold"], ["bold", "Bold"], ["black", "Extra bold"]]} />
+            <Sel label="Animation" value={f.buttonAnim || "none"} onChange={(v) => set("buttonAnim", v as never)} opts={[["none", "None"], ["lift", "Lift on hover"], ["pulse", "Pulse"], ["shine", "Shine sweep"], ["bounce", "Bounce"], ["glow", "Glow ring"]]} hint="For Add to bag and other main buttons" />
+            <Sel label="Shadow" value={f.buttonShadow || "none"} onChange={(v) => set("buttonShadow", v as never)} opts={[["none", "None"], ["soft", "Soft"], ["strong", "Strong"]]} />
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-3 border-t pt-4">
             <Toggle checked={on("showBuyNow")} onChange={tg("showBuyNow")} label="Show “Buy now”" />
@@ -122,13 +138,28 @@ export default function AppearancePage() {
             <Toggle checked={on("showWishlist")} onChange={tg("showWishlist")} label="Show wishlist heart" />
             <Toggle checked={on("showCardDelivery")} onChange={tg("showCardDelivery")} label="Show delivery note on cards" />
           </div>
-          <div style={vars} data-btn={f.buttonStyle || "solid"} className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 p-4">
+          <div style={vars} data-btn={f.buttonStyle || "solid"} data-btn-anim={f.buttonAnim || "none"} className="flex flex-wrap items-center gap-3 rounded-xl bg-gray-50 p-4">
             <span className="text-xs font-semibold uppercase text-gray-400">Preview</span>
             <button type="button" className="btn-primary">+ Add to bag</button>
             <button type="button" className="btn-primary btn-sm">Small</button>
             <span className="rounded-full px-3 py-1 text-xs font-bold text-white" style={{ background: `rgb(var(--c-accent))` }}>৳20 OFF</span>
             <span className="font-bold" style={{ color: "rgb(var(--c-primary))" }}>৳120</span>
           </div>
+        </Sec>
+
+        <Sec title="Medicine button (home page)" desc="A highlighted way into the pharmacy on the home page. On phones the category strip is hidden, so this is the main entrance.">
+          <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("medCtaShow")} onChange={tg("medCtaShow")} label="Show the medicine button" /></div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Sel label="Layout" value={f.medCtaStyle} onChange={(v) => set("medCtaStyle", v as never)} opts={[["banner", "Banner card with button"], ["button", "One wide button"]]} />
+            <Sel label="Shown on" value={f.medCtaDevices} onChange={(v) => set("medCtaDevices", v as never)} opts={[["mobile", "Phones only"], ["all", "Phones and computers"]]} />
+            <Field label="Title" hint="Empty = medicine page title"><input className="input" maxLength={60} value={f.medCtaTitle ?? ""} placeholder={f.medicineTitle || "Medicine & Healthcare"} onChange={(e) => set("medCtaTitle", e.target.value || undefined)} /></Field>
+            <Field label="Button text"><input className="input" maxLength={30} value={f.medCtaLabel ?? ""} placeholder="Order medicine" onChange={(e) => set("medCtaLabel", e.target.value || undefined)} /></Field>
+            <Field label="Small line under the title" className="sm:col-span-2"><input className="input" maxLength={120} value={f.medCtaSubtitle ?? ""} placeholder="Genuine medicines & health products, delivered fast" onChange={(e) => set("medCtaSubtitle", e.target.value)} /></Field>
+            <Color label="Colour 1" value={f.medCtaBg} onChange={sv("medCtaBg")} fallback="#047857" />
+            <Color label="Colour 2 (gradient end)" value={f.medCtaBg2} onChange={sv("medCtaBg2")} fallback="#10B981" />
+            <Color label="Text colour" value={f.medCtaText} onChange={sv("medCtaText")} fallback="#FFFFFF" hint="Empty = automatic" />
+          </div>
+          <ButtonDesigner title="Button design" sample={f.medCtaLabel || "Order medicine"} themeStyle={vars} value={f.medCtaBtn} onChange={(v) => set("medCtaBtn", v)} preset={{ style: "solid", bg: "#FFFFFF", color: "#047857", size: "sm", weight: "bold", anim: "shine" }} />
         </Sec>
 
         <Sec title="Floating support buttons" desc="Call Now and WhatsApp buttons. Numbers come from Settings & Contact.">
@@ -146,8 +177,11 @@ export default function AppearancePage() {
 
         <Sec title="Top category bar icons" desc="Optional images for the All, Medicine and Offers icons. Empty = letter icon."><div className="grid gap-4 sm:grid-cols-3"><ImageUpload kind="general" label="All icon" aspect="aspect-square" value={f.navAllImage} onChange={(v) => set("navAllImage", v)} hint="Square, e.g. 256x256" /><ImageUpload kind="general" label="Medicine icon" aspect="aspect-square" value={f.navMedicineImage} onChange={(v) => set("navMedicineImage", v)} hint="Square, e.g. 256x256" /><ImageUpload kind="general" label="Offers icon" aspect="aspect-square" value={f.navOffersImage} onChange={(v) => set("navOffersImage", v)} hint="Square, e.g. 256x256" /></div></Sec>
         <Sec title="Home page category icons" desc="Upload each icon image in Admin → Categories.">
-          <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("showCatSection")} onChange={tg("showCatSection")} label="Show this section" /><Toggle checked={on("catShowLabels")} onChange={tg("catShowLabels")} label="Show names under icons" /></div>
+          <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("showCatSection")} onChange={tg("showCatSection")} label="Show this section" /><Toggle checked={on("catShowLabels")} onChange={tg("catShowLabels")} label="Show category names" /><Toggle checked={on("catShowSeeAll")} onChange={tg("catShowSeeAll")} label="Show “View all” link" /></div>
           <div className="grid gap-4 sm:grid-cols-2">
+            <Sel label="Look" value={f.catStyle || "card"} onChange={(v) => set("catStyle", v as never)} opts={[["card", "Cards (white card + picture + name)"], ["tile", "Picture tiles (name on the picture)"], ["circle", "Round icons"]]} hint="Cards and tiles clearly look tappable" />
+            <Sel label="Layout" value={f.catLayout || "scroll"} onChange={(v) => set("catLayout", v as never)} opts={[["scroll", "Swipe sideways"], ["grid", "Grid (all categories visible)"]]} />
+            <Color label="Card background" value={f.catCardBg} onChange={sv("catCardBg")} fallback="#FFFFFF" hint="Cards look only" />
             <Sel label="Icon size" value={f.catIconSize || "md"} onChange={(v) => set("catIconSize", v)} opts={[["sm", "Small"], ["md", "Medium"], ["lg", "Large"]]} />
             <Sel label="Icon shape" value={f.catIconShape || "rounded"} onChange={(v) => set("catIconShape", v)} opts={[["rounded", "Rounded square"], ["circle", "Circle"], ["square", "Square"]]} />
             <Sel label="Image fit" value={f.catIconFit || "cover"} onChange={(v) => set("catIconFit", v)} opts={[["cover", "Fill (crop edges)"], ["contain", "Fit inside (no crop)"]]} />

@@ -5,6 +5,11 @@ const url = z.string().max(1000).refine((v) => v === "" || (v.startsWith("/") &&
 const colorRe = /^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})?$/;
 const color = z.string().trim().max(9).regex(colorRe, "Use a colour like #1E3A8A").optional();
 const pick = (...v: [string, ...string[]]) => z.enum(v).optional();
+const btnLook = z.object({
+  style: z.enum(["solid", "soft", "outline", "plain"]), bg: color, color,
+  size: z.enum(["sm", "md", "lg"]), weight: z.enum(["medium", "semibold", "bold", "black"]), radius: z.enum(["none", "md", "lg", "full"]),
+  anim: z.enum(["none", "lift", "pulse", "shine", "bounce", "glow"]), shadow: z.enum(["none", "soft", "strong"]), uppercase: z.boolean(),
+}).partial().optional();
 const optionalDate = z.string().optional().transform((v) => (v ? v : undefined));
 
 export const productSchema = z.object({
@@ -90,13 +95,19 @@ export const settingsSchema = z.object({
   facebook: z.string().trim().max(240).default(""),
   hours: z.string().trim().max(160).default(""),
   mapUrl: z.string().trim().max(600).default(""),
-  announcement: z.string().trim().max(200).default(""),
+  announcement: z.string().trim().max(600).default(""),
   announcementIcon: z.string().trim().max(8).optional(), announcementLink: z.string().trim().max(400).optional(),
-  announcementBg: color, announcementColor: color, announcementStyle: pick("static", "marquee"), announcementSize: pick("sm", "md", "lg"),
+  announcementBg: color, announcementColor: color, announcementStyle: pick("static", "marquee", "bounce", "rotate"), announcementSpeed: pick("slow", "normal", "fast"), announcementWeight: pick("normal", "semibold", "bold", "black"), announcementDirection: pick("left", "right"), announcementSep: z.string().trim().max(4).optional(), announcementSize: pick("sm", "md", "lg"),
   announcementDismissible: z.boolean().optional(), announcementCta: z.string().trim().max(30).optional(),
   headerTheme: pick("light", "brand"), headerBg: color, headerText: color, headerSticky: pick("bar", "all", "none"),
   headerShowCategories: z.boolean().optional(), headerShowOrders: z.boolean().optional(), headerShowTrack: z.boolean().optional(), headerShowContact: z.boolean().optional(),
   headerSearchStyle: pick("pill", "box"), headerCartStyle: pick("accent", "primary", "outline"), headerMedicineStyle: pick("soft", "solid", "plain"),
+  headerCartBtn: btnLook, headerMedicineBtn: btnLook, headerLinkBtn: btnLook,
+  buttonWeight: pick("medium", "semibold", "bold", "black"), buttonAnim: pick("none", "lift", "pulse", "shine", "bounce", "glow"), buttonShadow: pick("none", "soft", "strong"),
+  medCtaShow: z.boolean().optional(), medCtaDevices: pick("mobile", "all"), medCtaStyle: pick("banner", "button"),
+  medCtaTitle: z.string().trim().max(60).optional(), medCtaSubtitle: z.string().trim().max(120).optional(), medCtaLabel: z.string().trim().max(30).optional(),
+  medCtaBg: color, medCtaBg2: color, medCtaText: color, medCtaBtn: btnLook,
+  catLayout: pick("scroll", "grid"), catStyle: pick("card", "circle", "tile"), catCardBg: color, catShowSeeAll: z.boolean().optional(),
   cardImageRatio: pick("square", "wide", "tall"), cardStyle: pick("flat", "soft", "outlined"), cardRadius: pick("md", "lg", "xl"),
   cardShowUnit: z.boolean().optional(), cardShowQtyStepper: z.boolean().optional(), cardPriceColor: color, cardGap: pick("sm", "md", "lg"),
   pageBg: color, pageWidth: pick("normal", "wide"),

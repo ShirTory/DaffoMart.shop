@@ -17,10 +17,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const style = { ...themeVars(settings), "--fx-speed": SPEED_MULT[fx.speed] ?? 1 } as React.CSSProperties;
   const on = (v: boolean) => (fx.enabled && v ? "on" : "off");
   return (
-    <div className="flex min-h-screen flex-col" style={{ ...style, background: "rgb(var(--c-page))" }} data-btn={settings.buttonStyle || "solid"} data-fx-entrance={on(fx.entrance)} data-fx-lift={on(fx.cardLift)} data-fx-cat={on(fx.categoryFloat)} data-fx-shine={on(fx.badgeShine)} data-fx-float={on(fx.heroFloat)}>
+    <div className="flex min-h-screen flex-col" style={{ ...style, background: "rgb(var(--c-page))" }} data-btn={settings.buttonStyle || "solid"} data-btn-anim={settings.buttonAnim || "none"} data-fx-entrance={on(fx.entrance)} data-fx-lift={on(fx.cardLift)} data-fx-cat={on(fx.categoryFloat)} data-fx-shine={on(fx.badgeShine)} data-fx-float={on(fx.heroFloat)}>
       <TextsProvider texts={settings.texts} flags={{ showBuyNow: settings.showBuyNow !== false, showWishlist: settings.showWishlist !== false, showCardWhatsapp: settings.showCardWhatsapp !== false, showCardDelivery: settings.showCardDelivery !== false, cardImageRatio: settings.cardImageRatio || "wide", cardStyle: settings.cardStyle || "soft", cardRadius: settings.cardRadius || "xl", cardShowUnit: settings.cardShowUnit !== false, cardShowQtyStepper: settings.cardShowQtyStepper !== false, labelRules: settings.labelRules }}>
         <Header settings={settings} categories={categories} />
-        <main className="page-w mx-auto w-full flex-1 px-4 pb-24 pt-4 md:pb-8">{children}</main>
+        <main className="page-w mx-auto w-full flex-1 px-4 pb-4 pt-4 md:pb-8">{children}</main>
         <Footer settings={settings} categories={categories} />
         <BottomNav />
         <SupportButtons settings={settings} />

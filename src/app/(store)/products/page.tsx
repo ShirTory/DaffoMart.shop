@@ -148,7 +148,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
         {list.length === 0 ? (
           <EmptyState kind={emptyKind} settings={settings} />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-4 2xl:grid-cols-5">
             {list.map((p) => (
               <ProductCard key={p.id} p={p} whatsapp={settings.whatsapp} />
             ))}

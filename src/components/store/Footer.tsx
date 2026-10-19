@@ -28,8 +28,8 @@ export default async function Footer({ settings: s, categories }: { settings: St
           </div>
         </div>
       )}
-      <div className="mx-auto grid page-w w-full gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
+      <div className="mx-auto grid page-w w-full grid-cols-2 gap-x-5 gap-y-7 px-4 py-8 sm:gap-8 sm:py-10 lg:grid-cols-4">
+        <div className="col-span-2 lg:col-span-1">
           <div className="inline-block rounded-xl bg-white px-3 py-2">
             <Logo src={s.logo} name={s.storeName} className="h-9 w-auto" />
           </div>
@@ -38,7 +38,7 @@ export default async function Footer({ settings: s, categories }: { settings: St
         </div>
         <div className="text-sm">
           <h4 className="mb-3 font-semibold">{t("footer.shop")}</h4>
-          <ul className="space-y-2 text-white/70">
+          <ul className="space-y-2.5 text-white/70">
             <li><Link className="hover:text-white" href="/products">{t("footer.all")}</Link></li>
             {s.showMedicine && <li><Link className="font-semibold text-emerald-300 hover:text-white" href="/medicine">💊 {t("header.medicine")}</Link></li>}
             {s.footerShowCategories !== false && categories.filter((c) => c.kind !== "medicine").map((c) => (
@@ -57,7 +57,7 @@ export default async function Footer({ settings: s, categories }: { settings: St
             <li><Link className="hover:text-white" href="/checkout">{t("footer.checkout")}</Link></li>
           </ul>
         </div>
-        <div className="text-sm">
+        <div className="col-span-2 text-sm lg:col-span-1">
           <h4 className="mb-3 font-semibold">{t("footer.contact")}</h4>
           <ul className="space-y-2 text-white/70">
             {s.address && <li>{s.address}</li>}
@@ -78,7 +78,7 @@ export default async function Footer({ settings: s, categories }: { settings: St
           )}
         </div>
       </div>
-      <div className="border-t border-white/10 py-4 text-center text-xs text-white/50">
+      <div className="border-t border-white/10 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] pt-4 text-center text-xs text-white/50 md:pb-4">
         © {new Date().getFullYear()} {s.storeName}. {t("footer.rights")}
       </div>
     </footer>

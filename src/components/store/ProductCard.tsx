@@ -78,7 +78,7 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
         item={{ id: p.id, slug: p.slug, name: p.name, price: p.price, unit: p.unit, emoji: p.emoji, image: p.image }}
         className="absolute right-2 top-2 z-10"
       />
-      <Link href={`/products/${p.slug}`} className={`relative flex w-full items-center justify-center bg-white ${RATIO[flags.cardImageRatio] ?? RATIO.wide}`}>
+      <Link href={`/products/${p.slug}`} className={`relative flex w-full items-center justify-center bg-white ${RATIO[flags.cardImageRatio] ?? RATIO.wide} ${flags.cardImageRatio === "tall" ? "max-h-60" : "max-h-44 sm:max-h-48"}`}>
         <ProductImage p={p} className="transition duration-300 motion-safe:group-hover:scale-105" />
         {deal && !out && <DealBadge deal={deal} delay={dealDelay} className="absolute bottom-1 left-1 z-[1]" />}
         {out && <span className="absolute inset-0 flex items-center justify-center bg-white/75 text-xs font-bold text-gray-600">{t("card.out")}</span>}

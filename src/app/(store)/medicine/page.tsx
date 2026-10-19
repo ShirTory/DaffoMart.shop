@@ -34,7 +34,7 @@ export default async function MedicinePage({ searchParams }: { searchParams: Pro
       </div>
       <p className="mt-4 text-sm text-gray-500">{list.length} product{list.length === 1 ? "" : "s"}</p>
       {list.length === 0 ? <div className="mt-3"><EmptyState kind={ids.size && all.some((p) => ids.has(p.categoryId)) ? "search" : "none"} settings={s} actionHref="/medicine" /></div> :
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">{list.map((p) => <ProductCard key={p.id} p={p} whatsapp={s.whatsapp} />)}</div>}
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">{list.map((p) => <ProductCard key={p.id} p={p} whatsapp={s.whatsapp} />)}</div>}
     </div>
   );
 }

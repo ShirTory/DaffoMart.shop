@@ -7,6 +7,7 @@ import FeatureIcon from "@/components/store/FeatureIcon";
 import Reveal from "@/components/store/Reveal";
 import DealBadge from "@/components/store/DealBadge";
 import GroceryBanner from "@/components/store/GroceryBanner";
+import MedicineCta from "@/components/store/MedicineCta";
 import { dealInfo, dealKindForOffer, dealKindForProduct } from "@/lib/deals";
 import { parseEmojis, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { getActiveProducts, getBanners, getCategories, getOffers, getSettings } from "@/server/queries";
@@ -15,7 +16,7 @@ import { makeT } from "@/lib/texts";
 import { validHex } from "@/lib/theme";
 import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
-import type { HomeSectionConfig, HomeSectionId, Product } from "@/lib/types";
+import type { Category, HomeSectionConfig, HomeSectionId, Product } from "@/lib/types";
 
 export const revalidate = 60;
 
@@ -52,7 +53,7 @@ const Section = ({ title, children, href, emoji, viewAll = "View all →", promi
 );
 
 const HScroll = ({ children }: { children: React.ReactNode }) => (
-  <div className="scroll-thin -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-2 sm:pt-0 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+  <div className="no-scrollbar -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-2 sm:pt-0 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
     {children}
   </div>
 );
@@ -61,9 +62,9 @@ const CardWrap = ({ children }: { children: React.ReactNode }) => (
   <div className="w-[42vw] max-w-[180px] shrink-0 sm:w-auto sm:max-w-none">{children}</div>
 );
 
-const ICON = { sm: "h-14 w-14 sm:h-16 sm:w-16", md: "h-16 w-16 sm:h-18 sm:w-18", lg: "h-20 w-20 sm:h-24 sm:w-24" } as Record<string, string>;
-const ICON_W = { sm: "w-[64px] sm:w-[72px]", md: "w-[72px] sm:w-[80px]", lg: "w-[88px] sm:w-[104px]" } as Record<string, string>;
-const GAP = { sm: "gap-1.5", md: "gap-2.5", lg: "gap-4" } as Record<string, string>;
+const CAT_W = { sm: "w-[76px] sm:w-[92px]", md: "w-[88px] sm:w-[104px]", lg: "w-[104px] sm:w-[124px]" } as Record<string, string>;
+const CAT_SHAPE = { rounded: "rounded-xl", circle: "rounded-full", square: "rounded-md" } as Record<string, string>;
+const CAT_GAP = { sm: "gap-2", md: "gap-3", lg: "gap-4" } as Record<string, string>;
 
 function byCats(products: Product[], catIds: string[] | undefined) {
   if (!catIds?.length) return [];
@@ -152,33 +153,56 @@ export default async function Home() {
     </div>
   );
 
+  const catCard = (c: Category) => {
+    const size = settings.catIconSize || "md";
+    const bg = validHex(c.iconBg) || validHex(settings.catIconBg);
+    const cardBg = validHex(settings.catCardBg) || "#FFFFFF";
+    const shape = CAT_SHAPE[settings.catIconShape || "rounded"] ?? CAT_SHAPE.rounded;
+    const style = settings.catStyle || "card";
+    const labelColor = validHex(settings.catLabelColor) || "#1f2937";
+    const img = c.image ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={c.image} alt={c.name} className={`h-full w-full ${settings.catIconFit === "contain" ? "object-contain p-1.5" : "object-cover"}`} loading="lazy" decoding="async" />
+    ) : (
+      <span className="flex h-full w-full items-center justify-center text-lg font-extrabold text-gray-500">{(c.name || "?").charAt(0).toUpperCase()}</span>
+    );
+    const href = `/products?cat=${c.id}`;
+    if (style === "tile") {
+      return (
+        <Link key={c.id} href={href} aria-label={c.name} className={`cat-card group relative block aspect-square shrink-0 overflow-hidden shadow-sm ring-1 ring-black/5 ${CAT_W[size] ?? CAT_W.md} ${shape === "rounded-full" ? "rounded-3xl" : shape}`} style={{ background: bg || "#F3F4F6" }}>
+          {img}
+          {settings.catShowLabels !== false && <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 via-black/35 to-transparent px-1.5 pb-1.5 pt-6 text-center text-[11px] font-bold leading-tight text-white sm:text-xs"><span className="line-clamp-2">{c.name}</span></span>}
+        </Link>
+      );
+    }
+    if (style === "circle") {
+      return (
+        <Link key={c.id} href={href} className={`cat-card group flex shrink-0 flex-col items-center ${CAT_W[size] ?? CAT_W.md}`}>
+          <span className={`flex aspect-square w-[82%] items-center justify-center overflow-hidden rounded-full shadow-sm ring-1 ring-gray-200 group-hover:ring-primary ${bg ? "" : "bg-gradient-to-b from-gray-50 to-white"}`} style={bg ? { background: bg } : undefined}>{img}</span>
+          {settings.catShowLabels !== false && <span className="mt-1.5 line-clamp-2 text-center text-[11px] font-semibold leading-tight group-hover:text-primary sm:text-xs" style={{ color: labelColor }}>{c.name}</span>}
+        </Link>
+      );
+    }
+    return (
+      <Link key={c.id} href={href} className={`cat-card group flex shrink-0 flex-col items-center gap-1.5 rounded-2xl p-2 shadow-sm ring-1 ring-gray-100 hover:ring-primary/40 ${CAT_W[size] ?? CAT_W.md}`} style={{ background: cardBg }}>
+        <span className={`flex aspect-square w-full items-center justify-center overflow-hidden ${shape} ${bg ? "" : "bg-gradient-to-b from-gray-50 to-gray-100"}`} style={bg ? { background: bg } : undefined}>{img}</span>
+        {settings.catShowLabels !== false && <span className="flex min-h-[2.1em] w-full items-center justify-center text-center text-[11px] font-bold leading-tight group-hover:text-primary sm:text-xs" style={{ color: labelColor }}><span className="line-clamp-2">{c.name}</span></span>}
+      </Link>
+    );
+  };
+
   const categoriesBlock = settings.showCatSection !== false && shopCats.length > 0 ? (
-    <Section title={t("home.categories")} prominent>
-      <div className={`scroll-thin -mx-4 -mt-2 flex overflow-x-auto px-4 pb-1 pt-2 sm:mx-0 sm:mt-0 sm:pt-1 sm:flex-wrap sm:overflow-visible sm:px-0 ${GAP[settings.catGap || "sm"] ?? GAP.sm}`}>
-        {shopCats.map((c) => {
-          const bg = validHex(c.iconBg) || validHex(settings.catIconBg);
-          return (
-            <Link key={c.id} href={`/products?cat=${c.id}`} className={`group cat-link flex shrink-0 flex-col items-center ${ICON_W[settings.catIconSize || "sm"] ?? ICON_W.sm}`}>
-              <div
-                className={`cat-float flex items-center justify-center overflow-hidden shadow-sm ring-1 ring-gray-100 group-hover:ring-primary ${ICON[settings.catIconSize || "sm"] ?? ICON.sm} rounded-full ${bg ? "" : "bg-gradient-to-b from-gray-50 to-white"}`}
-                style={bg ? { background: bg } : undefined}
-              >
-                {c.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.image} alt={c.name} className={`h-full w-full ${settings.catIconFit === "contain" ? "object-contain p-1.5" : "object-cover"}`} loading="lazy" decoding="async" />
-                ) : (
-                  <span className="text-base font-bold text-gray-600 sm:text-lg">{(c.name || "?").charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              {settings.catShowLabels !== false && (
-                <p className="mt-1 line-clamp-2 text-center text-[10px] font-semibold leading-tight group-hover:text-primary sm:text-xs" style={{ color: validHex(settings.catLabelColor) || "#1f2937" }}>{c.name}</p>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-    </Section>
-  ) : null;
+    <>
+      <MedicineCta settings={settings} />
+      <Section title={t("home.categories")} href={settings.catShowSeeAll === false ? undefined : "/products"} viewAll={va} prominent>
+        {settings.catLayout === "grid" ? (
+          <div className={`grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm} [&>a]:!w-full`}>{shopCats.map(catCard)}</div>
+        ) : (
+          <div className={`no-scrollbar -mx-4 -mt-1 flex overflow-x-auto px-4 pb-2 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm}`}>{shopCats.map(catCard)}</div>
+        )}
+      </Section>
+    </>
+  ) : <MedicineCta settings={settings} />;
 
   const productSection = (title: string, list: Product[], href: string, emoji?: string, deals = false) =>
     list.length > 0 ? (
@@ -195,7 +219,7 @@ export default async function Home() {
     <>
       {posterOffers.length > 0 && (
         <Section title={t("home.deals")} emoji="🔥">
-          <div className="scroll-thin -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-2 sm:pt-0 lg:grid-cols-3">
+          <div className="no-scrollbar -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-2 sm:pt-0 lg:grid-cols-3">
             {posterOffers.map((o, k) => (
               <Reveal key={o.id} delay={k * 100} className="w-[85vw] max-w-md shrink-0 sm:w-auto sm:max-w-none">
               <div className="lift group/offer relative h-full overflow-hidden rounded-2xl border bg-white shadow-sm">

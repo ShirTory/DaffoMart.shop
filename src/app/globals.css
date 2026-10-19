@@ -126,3 +126,43 @@ body { background: rgb(var(--c-page, 246 247 251)); }
 
 /* Product card typography */
 .price-now { color: rgb(var(--c-price, 223 124 5)); }
+
+/* ================= Storefront polish v4 ================= */
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Global buttons: weight / shadow / animation come from Admin → Appearance → Buttons (CSS variables set in lib/theme.ts) */
+.btn { font-weight: var(--btn-weight, 600); }
+.btn-primary { box-shadow: var(--btn-shadow, none); }
+[data-btn-anim="pulse"] .btn-primary:not(:disabled) { animation: bx-pulse 2.2s ease-in-out infinite; }
+[data-btn-anim="bounce"] .btn-primary:not(:disabled) { animation: bx-bounce 1.8s ease-in-out infinite; }
+[data-btn-anim="glow"] .btn-primary:not(:disabled) { animation: bx-ring 2s ease-out infinite; --bx-glow: rgb(var(--c-btn) / .45); }
+[data-btn-anim="lift"] .btn-primary:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 8px 16px -6px rgb(var(--c-btn) / .5); }
+[data-btn-anim="shine"] .btn-primary:not(:disabled) { position: relative; }
+[data-btn-anim="shine"] .btn-primary:not(:disabled)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .45) 50%, transparent 65%); background-size: 250% 100%; animation: bx-sheen 2.8s ease-in-out infinite; }
+
+/* Individually designed buttons (lib/btnLook.ts) */
+@keyframes bx-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+@keyframes bx-bounce { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-4px); } 60% { transform: translateY(0); } 75% { transform: translateY(-2px); } }
+@keyframes bx-ring { 0% { box-shadow: 0 0 0 0 var(--bx-glow, rgba(30, 58, 138, .45)); } 80%, 100% { box-shadow: 0 0 0 10px transparent; } }
+@keyframes bx-sheen { 0% { background-position: 150% 0; } 60%, 100% { background-position: -100% 0; } }
+.bx:hover { filter: brightness(.94); }
+.bx-lift:hover { transform: translateY(-2px); }
+.bx-pulse { animation: bx-pulse 2.2s ease-in-out infinite; }
+.bx-bounce { animation: bx-bounce 1.8s ease-in-out infinite; }
+.bx-glow { animation: bx-ring 2s ease-out infinite; }
+.bx-shine { position: relative; }
+.bx-shine::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, .5) 50%, transparent 65%); background-size: 250% 100%; animation: bx-sheen 2.8s ease-in-out infinite; }
+
+/* Headline ticker (components/store/AnnouncementBar.tsx) */
+@keyframes ann-bounce { 0%, 12% { transform: translateX(0); } 45%, 55% { transform: translateX(var(--ann-shift, 0px)); } 88%, 100% { transform: translateX(0); } }
+.ann-bounce { display: inline-flex; white-space: nowrap; animation: ann-bounce var(--ann-dur, 12s) ease-in-out infinite; will-change: transform; }
+.ann-bounce:hover { animation-play-state: paused; }
+@keyframes ann-swap { from { opacity: 0; transform: translateY(70%); } to { opacity: 1; transform: none; } }
+.ann-swap { animation: ann-swap .45s cubic-bezier(.22, .8, .3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .ann-bounce, .ann-swap, .bx-pulse, .bx-bounce, .bx-glow, .bx-shine::after { animation: none !important; } }
+
+/* Category cards (home) */
+.cat-card { transition: transform .2s cubic-bezier(.22, .8, .3, 1), box-shadow .2s ease, border-color .2s ease; -webkit-tap-highlight-color: transparent; }
+.cat-card:active { transform: scale(.96); }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) { .cat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 22px -10px rgba(16, 24, 40, .28); } }

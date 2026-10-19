@@ -23,6 +23,8 @@ const tri = (c: number[]) => c.join(" ");
 export const validHex = (v?: string) => (v && HEX.test(v.trim()) && !LEGACY.has(v.trim().toLowerCase()) ? v.trim() : "");
 
 const RADIUS: Record<string, string> = { none: "0px", sm: "6px", md: "10px", lg: "14px", full: "9999px" };
+const WEIGHT: Record<string, string> = { medium: "500", semibold: "600", bold: "700", black: "900" };
+const SHADOW: Record<string, string> = { none: "none", soft: "0 1px 2px rgba(15,23,42,.12), 0 2px 6px -2px rgba(15,23,42,.18)", strong: "0 6px 16px -4px rgba(15,23,42,.35)" };
 const PAD: Record<string, [string, string, string]> = { sm: ["0.35rem", "0.8rem", "0.8rem"], md: ["0.5rem", "1rem", "0.875rem"], lg: ["0.7rem", "1.4rem", "1rem"] };
 
 /** CSS variables for the storefront wrapper: colours, button shape/size/colour. Tailwind classes read these. */
@@ -38,6 +40,7 @@ export function themeVars(s: Partial<StoreSettings>): Record<string, string> {
     "--c-accent": tri(a), "--c-accent-dark": tri(mix(a, black, 0.15)), "--c-accent-soft": tri(mix(a, white, 0.9)),
     "--c-secondary": tri(sec),
     "--c-btn": tri(btn), "--c-btn-dark": tri(mix(btn, black, 0.18)), "--c-btn-text": tri(rgb(s.buttonTextColor, "#ffffff")),
+    "--btn-weight": WEIGHT[s.buttonWeight || "semibold"] ?? "600", "--btn-shadow": SHADOW[s.buttonShadow || "none"] ?? "none",
     "--btn-radius": RADIUS[s.buttonRadius || "lg"] ?? RADIUS.lg, "--btn-py": py, "--btn-px": px, "--btn-fs": fs,
     "--c-page": tri(rgb(s.pageBg, "#F6F7FB")), "--page-max": s.pageWidth === "wide" ? "90rem" : "80rem",
     "--c-price": tri(validHex(s.cardPriceColor) ? rgb(s.cardPriceColor, BRAND.accent) : mix(a, black, 0.3)),

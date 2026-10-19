@@ -11,6 +11,7 @@ import AnnouncementBar from "./AnnouncementBar";
 import { useFlags, useT } from "./TextsProvider";
 import { CategoryChip } from "./CategoryIcon";
 import { luminance, readableOn, rgb, validHex } from "@/lib/theme";
+import { btnLookProps } from "@/lib/btnLook";
 
 const Icon = ({ d, className = "h-[22px] w-[22px]" }: { d: string; className?: string }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={d} /></svg>
@@ -57,16 +58,24 @@ export default function Header({ settings, categories }: { settings: StoreSettin
   const submit = (e: React.FormEvent) => { e.preventDefault(); router.push(`/products?q=${encodeURIComponent(q)}`); };
 
   const navLink = "hidden whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition hover:bg-[var(--h-hover)]";
-  const cartCls = settings.headerCartStyle === "primary"
-    ? "bg-primary text-white hover:bg-primary-dark"
+  const linkLook = settings.headerLinkBtn && Object.keys(settings.headerLinkBtn).length > 0 ? btnLookProps(settings.headerLinkBtn, { style: "plain", bg: "var(--h-muted)", size: "md", weight: "medium", radius: "full" }) : null;
+  const SHOW = { lg: ["lg:block", "lg:inline-flex"], xl: ["xl:block", "xl:inline-flex"] } as const;
+  const linkProps = (bp: "lg" | "xl") => linkLook
+    ? { className: `${linkLook.className.replace("inline-flex", "hidden")} ${SHOW[bp][1]}`, style: linkLook.style }
+    : { className: `${navLink} ${SHOW[bp][0]}`, style: { color: "var(--h-muted)" } as React.CSSProperties };
+  const CART_SQ = { sm: "max-sm:w-8 max-sm:px-0", md: "max-sm:w-10 max-sm:px-0", lg: "max-sm:w-12 max-sm:px-0" } as const;
+  const cartPreset = settings.headerCartStyle === "primary"
+    ? { style: "solid" as const, bg: "rgb(var(--c-primary))" }
     : settings.headerCartStyle === "outline"
-      ? "border-[1.5px] border-current hover:bg-[var(--h-hover)]"
-      : "bg-accent text-white hover:bg-accent-dark";
-  const medCls = settings.headerMedicineStyle === "solid"
-    ? "bg-emerald-600 text-white hover:bg-emerald-700"
+      ? { style: "outline" as const, bg: "currentColor" }
+      : { style: "solid" as const, bg: "rgb(var(--c-accent))" };
+  const cart = btnLookProps(settings.headerCartBtn, { ...cartPreset, color: "#FFFFFF", size: "md", weight: "semibold", radius: "full" });
+  const medPreset = settings.headerMedicineStyle === "solid"
+    ? { style: "solid" as const, bg: "#059669" }
     : settings.headerMedicineStyle === "plain"
-      ? "text-emerald-600 hover:bg-[var(--h-hover)]"
-      : "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200 hover:bg-emerald-100";
+      ? { style: "plain" as const, bg: "#059669" }
+      : { style: "soft" as const, bg: "#047857" };
+  const med = btnLookProps(settings.headerMedicineBtn, { ...medPreset, color: "#FFFFFF", size: "md", weight: "semibold", radius: "full" });
 
   const bar = (
     <header className={`${sticky === "bar" ? "sticky top-0 z-30" : "relative z-30"} border-b`} style={{ ...style, background: "var(--h-bg)", color: "var(--h-fg)", borderColor: "var(--h-line)" }}>
@@ -84,14 +93,14 @@ export default function Header({ settings, categories }: { settings: StoreSettin
         </form>
         <div className="ml-auto flex shrink-0 items-center gap-0.5 sm:gap-1">
           {settings.showMedicine && (
-            <Link href="/medicine" className={`mr-1 hidden items-center gap-1.5 rounded-full px-3.5 py-2 text-sm font-semibold transition md:flex ${medCls} ${path.startsWith("/medicine") ? "ring-2 ring-emerald-500" : ""}`}>
+            <Link href="/medicine" className={`${med.className.replace("inline-flex", "hidden")} mr-1 md:inline-flex ${path.startsWith("/medicine") ? "ring-2 ring-emerald-500" : ""}`} style={med.style}>
               <Icon d={CROSS} className="h-4 w-4" />
               {t("header.medicine")}
             </Link>
           )}
-          {on(settings.headerShowOrders) && <Link href="/orders" className={`${navLink} lg:block`} style={{ color: "var(--h-muted)" }}>{t("header.orders")}</Link>}
-          {on(settings.headerShowTrack) && <Link href="/track" className={`${navLink} lg:block`} style={{ color: "var(--h-muted)" }}>{t("header.track")}</Link>}
-          {on(settings.headerShowContact, false) && <Link href="/contact" className={`${navLink} xl:block`} style={{ color: "var(--h-muted)" }}>{t("header.contact")}</Link>}
+          {on(settings.headerShowOrders) && <Link href="/orders" {...linkProps("lg")}>{t("header.orders")}</Link>}
+          {on(settings.headerShowTrack) && <Link href="/track" {...linkProps("lg")}>{t("header.track")}</Link>}
+          {on(settings.headerShowContact, false) && <Link href="/contact" {...linkProps("xl")}>{t("header.contact")}</Link>}
           <NotificationBell />
           {flags.showWishlist && (
             <Link href="/wishlist" className="relative hidden h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--h-hover)] sm:flex" aria-label="Wishlist">
@@ -99,7 +108,7 @@ export default function Header({ settings, categories }: { settings: StoreSettin
               {mounted && wishCount > 0 && <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[color:var(--h-bg)]">{wishCount}</span>}
             </Link>
           )}
-          <Link href="/cart" aria-label="Cart" className={`relative ml-1 flex h-10 items-center gap-2 rounded-full px-3 text-sm font-semibold transition sm:px-4 ${cartCls}`}>
+          <Link href="/cart" aria-label="Cart" className={`${cart.className} ${CART_SQ[settings.headerCartBtn?.size || "md"] ?? CART_SQ.md} relative ml-1`} style={cart.style}>
             <Icon d={CART} className="h-5 w-5" />
             <span className="hidden sm:inline">{t("header.cart")}</span>
             {mounted && count > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-deeper px-1 text-[11px] font-bold leading-none text-white ring-2 ring-[color:var(--h-bg)]">{count}</span>}

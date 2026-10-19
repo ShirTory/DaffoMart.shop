@@ -1,0 +1,19 @@
+DaffoMart UI update v3 - only the changed files (same folder paths as your project)
+
+Apply:
+1. Copy the "src" folder from this zip over your project's "src" folder (replace when asked).
+   (Your project must already contain the previous UI-Update files + Animated-v2.)
+2. npm run build   (or npm run dev)
+3. git add -A && git commit -m "UI update v3" && git push
+
+Fixed / added
+- Home (phone): highlighted Medicine button/banner under the feature cards. Admin -> Appearance -> "Medicine button (home page)".
+- Shop by category: new Cards / Picture tiles / Round icons look, swipe or grid layout, "View all" link, no ugly scrollbar. Admin -> Appearance -> Home page category icons.
+- Medicine page + product list on laptop: denser grid (4/5/6 columns) and a height cap on card photos.
+- Phone: removed the big empty band under the last product row (space now sits inside the footer, behind the bottom nav).
+- Phone footer: Shop and Help links sit side by side; brand and contact span the full width.
+- Headline bar: one headline per line; Still / Scrolling ticker / Back-and-forth / One-at-a-time, speed, boldness, direction, separator.
+- Buttons: Admin -> Appearance -> Buttons now has boldness, animation, shadow. Header cart, medicine and text links each have a full designer
+  (colour, text colour, style, size, boldness, shape, animation, shadow, CAPITALS) with live preview.
+No new packages, no database migration; every new setting is optional with a safe default.
+Not verified here: next build / browser (sandbox has no npm registry and no browser). Run npm run build before pushing.

@@ -59,6 +59,13 @@ export type HomeSectionId =
   | "buyAgain";
 export interface HomeSectionConfig { id: HomeSectionId; visible: boolean }
 
+/** Look of one customisable button (Admin → Appearance → button designer). Every field is optional; empty = the built-in look. */
+export interface BtnLook {
+  style?: "solid" | "soft" | "outline" | "plain"; bg?: string; color?: string;
+  size?: "sm" | "md" | "lg"; weight?: "medium" | "semibold" | "bold" | "black"; radius?: "none" | "md" | "lg" | "full";
+  anim?: "none" | "lift" | "pulse" | "shine" | "bounce" | "glow"; shadow?: "none" | "soft" | "strong"; uppercase?: boolean;
+}
+
 export interface Feature { icon: string; title: string; text: string; image?: string }
 
 /** Product card label rules — Admin configurable, based on real data only */
@@ -147,11 +154,17 @@ export interface StoreSettings {
   announcement: string; facebook: string; whatsapp: string;
   /** announcement bar look (Admin → Appearance) */
   announcementIcon?: string; announcementLink?: string; announcementBg?: string; announcementColor?: string;
-  announcementStyle?: "static" | "marquee"; announcementSize?: "sm" | "md" | "lg"; announcementDismissible?: boolean; announcementCta?: string;
+  announcementStyle?: "static" | "marquee" | "bounce" | "rotate"; announcementSpeed?: "slow" | "normal" | "fast"; announcementWeight?: "normal" | "semibold" | "bold" | "black"; announcementDirection?: "left" | "right"; announcementSep?: string; announcementSize?: "sm" | "md" | "lg"; announcementDismissible?: boolean; announcementCta?: string;
   /** header look (Admin → Appearance) */
   headerTheme?: "light" | "brand"; headerBg?: string; headerText?: string; headerSticky?: "bar" | "all" | "none";
   headerShowCategories?: boolean; headerShowOrders?: boolean; headerShowTrack?: boolean; headerShowContact?: boolean; headerSearchStyle?: "pill" | "box";
   headerCartStyle?: "accent" | "primary" | "outline"; headerMedicineStyle?: "soft" | "solid" | "plain";
+  /** full button designer for header buttons (overrides the presets above when set) */
+  headerCartBtn?: BtnLook; headerMedicineBtn?: BtnLook; headerLinkBtn?: BtnLook;
+  /** global button extras + the highlighted medicine button on the home page */
+  buttonWeight?: "medium" | "semibold" | "bold" | "black"; buttonAnim?: "none" | "lift" | "pulse" | "shine" | "bounce" | "glow"; buttonShadow?: "none" | "soft" | "strong";
+  medCtaShow?: boolean; medCtaDevices?: "mobile" | "all"; medCtaStyle?: "banner" | "button"; medCtaTitle?: string; medCtaSubtitle?: string; medCtaLabel?: string; medCtaBg?: string; medCtaBg2?: string; medCtaText?: string; medCtaBtn?: BtnLook;
+  catLayout?: "scroll" | "grid"; catStyle?: "card" | "circle" | "tile"; catCardBg?: string; catShowSeeAll?: boolean;
   /** product card look (Admin → Appearance) */
   cardImageRatio?: "square" | "wide" | "tall"; cardStyle?: "flat" | "soft" | "outlined"; cardRadius?: "md" | "lg" | "xl";
   cardShowUnit?: boolean; cardShowQtyStepper?: boolean; cardPriceColor?: string; cardGap?: "sm" | "md" | "lg";
