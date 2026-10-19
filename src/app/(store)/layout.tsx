@@ -15,7 +15,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const style = themeVars(settings) as React.CSSProperties;
   return (
     <div style={style} data-btn={settings.buttonStyle || "solid"}>
-      <TextsProvider texts={settings.texts} flags={{ showBuyNow: settings.showBuyNow !== false, showWishlist: settings.showWishlist !== false, showCardWhatsapp: settings.showCardWhatsapp !== false, showCardDelivery: settings.showCardDelivery !== false }}>
+      <TextsProvider texts={settings.texts} flags={{ showBuyNow: settings.showBuyNow !== false, showWishlist: settings.showWishlist !== false, showCardWhatsapp: settings.showCardWhatsapp !== false, showCardDelivery: settings.showCardDelivery !== false, labelRules: settings.labelRules }}>
         <Header settings={settings} categories={categories} />
         <main className="mx-auto min-h-[70vh] max-w-7xl px-4 py-3 pb-24 md:pb-4">{children}</main>
         <Footer settings={settings} categories={categories} />

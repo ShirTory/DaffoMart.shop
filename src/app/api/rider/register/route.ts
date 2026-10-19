@@ -30,7 +30,7 @@ export const POST = handle(async (req) => {
   if (!(front instanceof File) || !(back instanceof File) || !front.size || !back.size) throw new ApiError(400, "Upload both the front and the back photo of your NID card");
   for (const f of [front, back]) if (f.size > MAX_NID_BYTES) throw new ApiError(413, `Each NID photo must be under ${MAX_NID_BYTES / 1024 / 1024} MB`);
 
-  const existing = (await db.list<Rider>("riders")).find((r) => r.phone === d.phone);
+  const existing = (await db.find<Rider>("riders", "phone", d.phone))[0];
   if (existing && existing.status === "pending") throw new ApiError(409, "You have already applied with this number. Your application is under review.");
   if (existing && existing.status !== "rejected") throw new ApiError(409, "This mobile number is already registered. Please sign in.");
 

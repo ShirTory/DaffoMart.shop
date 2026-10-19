@@ -11,7 +11,7 @@ const cached = <A extends unknown[], R>(fn: (...a: A) => Promise<R>, key: string
 export const getCategories = cached(async () => (await db.list<Category>("categories")).filter((c) => c.active).sort((a, b) => a.sortOrder - b.sortOrder), "categories");
 export const getBanners = cached(async () => (await db.list<Banner>("banners")).filter((b) => b.active).sort((a, b) => a.sortOrder - b.sortOrder), "banners");
 export const getOffers = cached(async () => (await db.list<Offer>("offers")).filter((o) => offerIsLive(o)).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), "offers");
-export const getActiveProducts = cached(async () => (await db.list<Product>("products")).filter((p) => p.active), "products");
+export const getActiveProducts = cached(async () => (await db.list<Product>("products")).filter((p) => p.active).map(({ cost, ...p }) => p as Product), "products"); // `cost` never reaches the storefront
 export const getSettings = cached(liveSettings, "settings");
 export const getZones = cached(liveZones, "zones");
 export const isMedicineCat = (c?: Category) => c?.kind === "medicine";

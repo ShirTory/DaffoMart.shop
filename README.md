@@ -1,41 +1,56 @@
-# DaffoMart
+# DaffoMart (Integrated Final)
 
-Next.js 15 + TypeScript + Tailwind. Storefront (English) + professional admin dashboard + REST API.
+Student-focused online grocery & medicine platform — Next.js 15 + TypeScript + Tailwind.
 
-## Run locally
-    npm install
-    npm run dev          # http://localhost:3000
-Admin: http://localhost:3000/admin/login — login is in `.env.local` (ADMIN_EMAIL / ADMIN_PASSWORD).
-In production set ADMIN_EMAIL, ADMIN_PASSWORD, AUTH_SECRET on the host. Without Firebase, data is saved in `.data/`.
+**This package is the merged production-ready codebase** combining the best of two source trees:
+- `DaffoMart-updated.zip` — consolidated accounting, finance dashboards, auth, order lifecycle
+- `DaffoMart-accounting.zip` — improved ProductCard (qty selector + stock rules), Header, pure cart helpers
 
-## Admin dashboard
-Dashboard (sales chart, top products, low stock) · Orders (status, **rider assignment**, invoice print) · Products (multi-image upload, medicine fields) ·
-Categories (grocery / **medicine** type) · **Inventory** (stock levels + history) · **Delivery Areas** (charge per area) · **Riders** ·
-**Cover Images** · **Offers & Coupons** · **Website Content** (logo, banner text, medicine section, highlights) · Settings & Contact (+ Firebase test).
+See `docs/FEATURE-INTEGRATION-REPORT.md` for the full merge map. Accounting details: `docs/ACCOUNTING.md`.
 
-## REST API (JSON `{ok, data}` / `{ok:false, error}`)
-Public: `GET /api/products` (q, cat, sort, min, max, sale, featured, limit, page) · `/api/products/:id` · `/api/categories` ·
-`/api/banners` · `/api/offers` · `/api/settings` · `POST /api/orders` · `GET /api/orders/track?no=&phone=` · `POST /api/coupons/validate`
-Admin (cookie session): `POST/PUT/DELETE` on products, categories, banners, offers · `PUT /api/settings` ·
-`GET/PATCH/DELETE /api/orders[/:id]` · `POST /api/upload` (multipart `file`, `kind`) · `GET /api/admin/stats`
-Security: signed HttpOnly session cookie, server-side validation (zod), prices/stock/coupon recomputed on the server,
-images verified & converted to WebP, rate limits on login/orders.
+## Quick start
+```bash
+cp .env.example .env.local   # set ADMIN_EMAIL, ADMIN_PASSWORD, AUTH_SECRET
+npm install
+npm run dev                  # http://localhost:3000
+```
+Admin login: `/admin/login` (credentials from `.env.local`).  
+Without Firebase, data lives in `.data/`.
 
-## Rider app (`/rider`)
-New riders apply at `/rider/register` (name, mobile, password, NID number, permanent + present address, referrer, NID front + back photo); an admin approves or rejects them in **Admin → Riders → Applications** (see `DEPLOYMENT.md`). Only approved riders can sign in.
-Riders sign in at `/rider/login` (phone + password set in Admin → Riders). They see only their own orders and can:
-- switch on **Share live location** (GPS is sent to the server every few seconds; turns on automatically when they press *Start delivery*),
-- see their own position and every customer's pin on a **Map** tab, plus the distance to each customer and a route map inside each order,
-- call the customer, open **Navigate** (Google Maps turn-by-turn), update status, and see the cash to collect.
-A web page cannot track in the background: the rider keeps the page open with the screen on (the app asks the phone to stay awake).
+## Scripts
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Run production build |
+| `npm test` | Unit tests (65 cases: auth, orders, finance, accounting, cart, security) |
+| `npm run lint` | TypeScript check (`tsc --noEmit`) |
 
-## Live tracking
-- **Customer** (`/track`): once the rider has picked up the parcel, the page shows a live map (rider 🛵 + customer 🏠), distance and a rough ETA, refreshing every 10 s. The rider is shown only while he is delivering that order.
-- **Admin → Live Map**: every rider who is sharing, plus the customers they are delivering to.
-- A customer pin exists only if the customer pressed *Use my current location* at checkout.
+## Major features
+**Storefront:** responsive product grid, categories (grocery + medicine), search/filters, quantity-aware cart, checkout, order tracking, wishlist, PWA install prompt.  
+**Admin:** dashboard, orders (status + rider assignment + invoice), products (multi-image, Rx fields), inventory, delivery zones, riders/employees, offers/coupons, content CMS, settings.  
+**Finance:** cash-basis cash-flow, account balances, staff payroll, rider earnings, purchases & suppliers, P&L with COGS when costs exist, idempotent payments, no double-counting of salary/expenses.  
+**Portals:** Rider app (earnings, live GPS) · Employee panel · Role-based access (Owner / Accountant / IT Support).
 
-## Payments
-COD + manual bKash/Nagad + an **Online payment** option. Online payment is already on the checkout page: it shows as *Coming soon* until a gateway is connected. See `PAYMENTS.md`.
+## Configuration
+Copy `.env.example` → `.env.local`. Required for production:
+- `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `AUTH_SECRET`
+- Optional Firebase: `FIREBASE_*` (see example)
+- Optional Maps: `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`
 
-## Google Maps
-Works with **no API key** (keyless embed: route/pin that refreshes). For the smooth interactive live map add `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` (see `.env.example`).
+Never commit real secrets. Firestore/Storage rules are in `firestore.rules` / `storage.rules`.
+
+## Tests performed in the integration environment
+- All unit tests: **65 / 65 passed**
+- `next build` and full browser QA: **not executed here** (run locally before deploy)
+
+## Documentation
+- `docs/FEATURE-INTEGRATION-REPORT.md` — what came from which source
+- `docs/ACCOUNTING.md` — money rules, stock, payroll, purchases
+- `docs/RELEASE-REPORT.md` — verification status & known limitations
+- `docs/TESTING.md` — how to run tests
+- `docs/REQUIREMENTS-CHECKLIST.md` — feature checklist
+- `PAYMENTS.md`, `DEPLOYMENT.md`
+
+## License / ownership
+Private project. Integrate and deploy according to your own hosting (Netlify config included).

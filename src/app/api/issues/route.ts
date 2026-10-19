@@ -1,6 +1,8 @@
 import { db, newId } from "@/server/db";
 import { ApiError, clientIp, handle, ok, rateLimit } from "@/server/http";
 import { requireAdmin } from "@/server/auth";
+import { getRider } from "@/server/riderAuth";
+import { normPhone } from "@/lib/format";
 import { MAX_UPLOAD_BYTES, saveImage } from "@/server/storage";
 import { issueCreateSchema } from "@/lib/validators";
 import type { Order, OrderIssue } from "@/lib/types";
@@ -32,27 +34,26 @@ export const POST = handle(async (req) => {
   });
   const order = await db.get<Order>("orders", d.orderId);
   if (!order) throw new ApiError(404, "Order not found");
+  if (d.raisedBy === "rider") { // only the signed-in rider of THIS order
+    const rider = await getRider();
+    if (!rider || rider.id !== order.riderId) throw new ApiError(403, "You can only report issues on your own deliveries");
+  } else if (normPhone(d.raiserPhone ?? "") !== order.phone) throw new ApiError(403, "Enter the phone number used for this order"); // customer ownership
+  if (form.get("video") instanceof File && (form.get("video") as File).size) throw new ApiError(400, "Video upload is not supported. Please attach photos instead.");
 
   const photos: string[] = [];
-  for (const f of form.getAll("photos")) {
-    if (!(f instanceof File) || !f.size) continue;
+  const files = form.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length > 5) throw new ApiError(400, "You can attach up to 5 photos");
+  for (const f of files) {
     if (f.size > MAX_UPLOAD_BYTES) throw new ApiError(413, `Each photo must be under ${MAX_UPLOAD_BYTES / 1024 / 1024} MB`);
     const r = await saveImage(Buffer.from(await f.arrayBuffer()), "issue");
     photos.push(r.url);
   }
-  let video: string | undefined;
-  const vid = form.get("video");
-  if (vid instanceof File && vid.size && vid.size <= 25 * 1024 * 1024) {
-    try {
-      const r = await saveImage(Buffer.from(await vid.arrayBuffer()), "issue-video");
-      video = r.url;
-    } catch { /* optional */ }
-  }
+  const video: string | undefined = undefined;
 
   const at = new Date().toISOString();
   const rec: OrderIssue = {
     id: newId(), orderId: order.id, orderNo: order.orderNo,
-    raisedBy: d.raisedBy, raiserName: d.raiserName || order.name, raiserPhone: d.raiserPhone || order.phone,
+    raisedBy: d.raisedBy, raiserName: d.raiserName || order.name, raiserPhone: order.phone,
     text: d.text, photos, video, status: "open", createdAt: at, updatedAt: at,
   };
   await db.put("issues", rec);

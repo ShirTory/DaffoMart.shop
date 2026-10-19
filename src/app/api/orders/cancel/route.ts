@@ -14,7 +14,7 @@ export const POST = handle(async (req) => {
   const no = (body.no ?? "").trim().toUpperCase();
   const phone = normPhone((body.phone ?? "").trim());
   if (!no || !phone) throw new ApiError(400, "Enter your order number and phone number");
-  const o = (await db.list<Order>("orders")).find((x) => x.orderNo === no && x.phone === phone);
+  const o = (await db.find<Order>("orders", "orderNo", no)).find((x) => x.phone === phone);
   if (!o) throw new ApiError(404, "No order found with these details");
   if (o.status !== "pending") throw new ApiError(400, "Only pending orders can be cancelled");
   const age = Date.now() - new Date(o.createdAt).getTime();

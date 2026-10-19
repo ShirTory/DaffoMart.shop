@@ -17,16 +17,58 @@ async function uniqueSlug(base: string, selfId?: string) {
   return s;
 }
 
+/** A reservation with no saved product behind it is "in progress" for this long before another save may take it over. */
+const SKU_HOLD_MS = 120_000;
+/** Atomically reserve `sku` for product `owner` (unique key document). Fails with 409 if another product holds it. */
+export async function claimSku(sku: string, owner: string) {
+  const mine = { id: sku, owner, at: new Date().toISOString() };
+  if (await db.create("sku_index", mine)) return;
+  const cur = await db.get<{ id: string; owner: string; at?: string }>("sku_index", sku);
+  if (!cur) { if (await db.create("sku_index", mine)) return; throw new ApiError(409, `SKU "${sku}" was just taken. Please try again.`); }
+  if (cur.owner === owner) return; // retry of the same save
+  const holder = await db.get<Product>("products", cur.owner);
+  const holderUsesIt = holder && holder.sku?.toUpperCase() === sku;
+  const inProgress = !holder && cur.at && Date.now() - Date.parse(cur.at) < SKU_HOLD_MS; // the other save has not been written yet
+  if (holderUsesIt || inProgress) throw new ApiError(409, `SKU "${sku}" is already used by another product`);
+  await db.put("sku_index", mine); // stale: its product was deleted, moved to another SKU, or the save never completed
+}
+export async function releaseSku(sku: string | undefined, owner: string) {
+  if (!sku) return;
+  const cur = await db.get<{ owner: string }>("sku_index", sku.toUpperCase());
+  if (cur?.owner === owner) await db.remove("sku_index", sku.toUpperCase());
+}
+
+/** Purchase cost is a business secret: only full-access admins may see it. */
+export const stripCost = <T extends { cost?: unknown }>(p: T): T => { const { cost, ...rest } = p; return rest as T; };
+
 export const productCfg = {
   col: "products" as const, schema: productSchema,
+  publicPresent: (p: Product): Product => stripCost(p),
   visible: (p: Product) => p.active,
-  prepare: async (d: any, prev: Product | null): Promise<Omit<Product, "id">> => ({
-    ...d,
-    slug: await uniqueSlug(d.slug || d.name, prev?.id),
-    images: (d.images ?? []).filter(Boolean),
-    sold: prev?.sold ?? 0,
-    createdAt: prev?.createdAt ?? now(), updatedAt: now(),
-  }),
+  beforeDelete: async (id: string) => { const p = await db.get<Product>("products", id); if (p) await releaseSku(p.sku, id); },
+  prepare: async (d: any, prev: Product | null, id?: string): Promise<Omit<Product, "id">> => {
+    const sku = (d.sku || "").trim().toUpperCase() || undefined;
+    if (d.active && !sku) throw new ApiError(400, "SKU is required for published products");
+    const owner = prev?.id ?? id;
+    if (sku) {
+      // 1) products saved before the index existed have no reservation: check them directly
+      const all = await db.list<Product>("products");
+      const dup = all.find((p) => p.sku && p.sku.toUpperCase() === sku && p.id !== owner);
+      if (dup) throw new ApiError(409, `SKU "${sku}" is already used by another product`);
+      // 2) atomic reservation: two simultaneous saves of the same SKU cannot both succeed
+      if (owner) await claimSku(sku, owner);
+    }
+    if (owner && prev?.sku && prev.sku.toUpperCase() !== sku) await releaseSku(prev.sku, owner);
+    return {
+      ...d,
+      sku,
+      cost: prev?.cost, // maintained by purchases; an ordinary product edit must not wipe it
+      slug: await uniqueSlug(d.slug || d.name, prev?.id),
+      images: (d.images ?? []).filter(Boolean),
+      sold: prev?.sold ?? 0,
+      createdAt: prev?.createdAt ?? now(), updatedAt: now(),
+    };
+  },
 };
 
 export const categoryCfg = {
@@ -81,6 +123,7 @@ export const riderCfg = {
     const dup = (await db.list<Rider>("riders")).find((x) => x.phone === d.phone && x.id !== prev?.id);
     if (dup) throw new ApiError(409, "Another rider already uses this phone number (it is the login ID)");
     const passHash = password ? hashPassword(password) : prev?.passHash;
+    const pwChangedAt = password ? now() : prev?.pwChangedAt;
     if (!passHash && !prev) throw new ApiError(400, "Set a login password for the rider (min 6 characters)");
     const live = prev?.locAt ? { lat: prev.lat, lng: prev.lng, locAt: prev.locAt } : {}; // GPS is written by the rider app, never by the admin form
     // application data + review result are written by the apply/review routes only, never by the admin form
@@ -98,7 +141,7 @@ export const riderCfg = {
       ratingAvg: prev.ratingAvg, ratingCount: prev.ratingCount,
       image: rest.image !== undefined ? rest.image : prev.image,
     } : { status: "approved" };
-    return { ...rest, ...live, ...app, passHash, createdAt: prev?.createdAt ?? now() };
+    return { ...rest, ...live, ...app, passHash, pwChangedAt, createdAt: prev?.createdAt ?? now() };
   },
   beforeDelete: async (id: string) => { await db.remove("nid", `${id}-front`); await db.remove("nid", `${id}-back`); },
   present: (r: Rider): Rider => { const { passHash, ...rest } = r; return { ...rest, hasPassword: Boolean(passHash) } as Rider; },
@@ -115,6 +158,7 @@ export const employeeCfg = {
     return {
       ...rest,
       passHash,
+      pwChangedAt: password ? now() : prev?.pwChangedAt,
       hasPassword: Boolean(passHash),
       ...(prev ? {
         status: prev.status,

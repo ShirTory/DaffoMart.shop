@@ -10,6 +10,11 @@ const NAV: { href: string; label: string; icon: string; section?: string }[] = [
   { href: "/admin", label: "Dashboard", icon: "dashboard", section: "Overview" },
   { href: "/admin/operations", label: "Operations", icon: "ops" },
   { href: "/admin/orders", label: "Orders", icon: "orders", section: "Sales" },
+  { href: "/admin/finance", label: "Finance", icon: "trend" },
+  { href: "/admin/finance/payroll", label: "Staff Payroll", icon: "users" },
+  { href: "/admin/finance/rider-earnings", label: "Rider Earnings", icon: "rider" },
+  { href: "/admin/finance/purchases", label: "Purchases & Suppliers", icon: "inventory" },
+  { href: "/admin/finance/balances", label: "Balances & Dues", icon: "trend" },
   { href: "/admin/issues", label: "Issues", icon: "alert" },
   { href: "/admin/products", label: "Products", icon: "products" },
   { href: "/admin/categories", label: "Categories", icon: "categories" },
@@ -27,16 +32,24 @@ const NAV: { href: string; label: string; icon: string; section?: string }[] = [
   { href: "/admin/covers", label: "Cover Images", icon: "covers" },
   { href: "/admin/payments", label: "Payments", icon: "trend" },
   { href: "/admin/invoice-settings", label: "Invoice", icon: "invoice" },
+  { href: "/admin/it-support", label: "IT Support", icon: "users", section: "Security" },
+  { href: "/admin/audit", label: "Audit logs", icon: "ops" },
   { href: "/admin/settings", label: "Settings & Contact", icon: "settings" },
 ];
 
-export default function AdminShell({ email, children }: { email: string; children: React.ReactNode }) {
+/** An Accountant only sees (and may only open) the Finance pages; the API enforces the same boundary. */
+const isFinancePath = (p: string) => p === "/admin/finance" || p.startsWith("/admin/finance/");
+
+export default function AdminShell({ email, role, children }: { email: string; role?: string; children: React.ReactNode }) {
+  const accountant = role === "accountant";
   const path = usePathname(); const router = useRouter(); const [open, setOpen] = useState(false); const [pending, setPending] = useState(0);
   useEffect(() => setOpen(false), [path]);
-  useEffect(() => { api<{ count: number }>("/api/admin/riders-pending").then((r) => setPending(r.count)).catch(() => {}); }, [path]); // new rider applications waiting for approval
-  const active = (h: string) => (h === "/admin" ? path === h : path === h || path.startsWith(h + "/"));
+  useEffect(() => { if (accountant && !isFinancePath(path)) router.replace("/admin/finance"); }, [accountant, path, router]);
+  useEffect(() => { if (accountant) return; api<{ count: number }>("/api/admin/riders-pending").then((r) => setPending(r.count)).catch(() => {}); }, [path]); // new rider applications waiting for approval
+  const nav = accountant ? NAV.filter((n) => isFinancePath(n.href)) : NAV;
+  const active = (h: string) => (h === "/admin" ? path === h : h === "/admin/finance" ? path === h : path === h || path.startsWith(h + "/"));
   const logout = async () => { await api("/api/auth/logout", { method: "POST" }).catch(() => {}); router.replace("/admin/login"); router.refresh(); };
-  const current = NAV.find((n) => active(n.href))?.label ?? "Admin";
+  const current = nav.find((n) => active(n.href))?.label ?? "Admin";
 
   const Sidebar = (
     <div className="flex h-full flex-col bg-primary-deeper text-white">
@@ -45,7 +58,7 @@ export default function AdminShell({ email, children }: { email: string; childre
         <p className="mt-3 px-1 text-[11px] font-semibold uppercase tracking-widest text-white/40">Admin Panel</p>
       </div>
       <nav className="scroll-thin flex-1 space-y-1 overflow-y-auto px-3">
-        {NAV.map((n) => (
+        {nav.map((n) => (
           <div key={n.href}>
             {n.section && <p className="px-3 pb-1 pt-3 text-[10px] font-bold uppercase tracking-widest text-white/35">{n.section}</p>}
           <Link href={n.href} className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${active(n.href) ? "bg-accent text-white shadow" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>

@@ -50,11 +50,11 @@ export function CategoryChip({
   return (
     <Link
       href={href}
-      className={`group flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition sm:w-[5rem] ${
+      className={`group cat-link flex w-[4.5rem] shrink-0 flex-col items-center gap-1 rounded-xl px-1 py-1.5 transition sm:w-[5rem] ${
         active ? "bg-primary-soft" : "hover:bg-gray-50"
       }`}
     >
-      <CategoryIcon category={{ name, image, iconBg }} size="md" className={active ? "ring-2 ring-primary" : "group-hover:ring-primary/40"} />
+      <CategoryIcon category={{ name, image, iconBg }} size="md" className={`cat-float ${active ? "ring-2 ring-primary" : "group-hover:ring-primary/40"}`} />
       <span className={`line-clamp-2 w-full text-center text-[11px] font-bold leading-tight sm:text-xs ${active ? "text-primary" : "text-gray-800"}`}>
         {name}
       </span>

@@ -1,10 +1,11 @@
-import { db, newId } from "./db";
+import { createHash, randomInt } from "crypto";
+import { db, newId, StockError } from "./db";
 import { ApiError } from "./http";
 import { defaultSettings } from "./seed";
 import { ORDER_STATUSES } from "@/lib/types";
 import { paymentOptions } from "./payments";
 import type { Courier, DeliveryZone, Offer, Order, OrderItem, Product, Rider, StockLog, StoreSettings } from "@/lib/types";
-import { orderCreateSchema } from "@/lib/validators";
+import type { orderCreateSchema } from "@/lib/validators";
 import { riderApproved } from "@/lib/rider";
 import type { z } from "zod";
 
@@ -12,6 +13,8 @@ export async function getSettings(): Promise<StoreSettings> {
   const s = await db.get<StoreSettings>("settings", "store");
   const m = { ...defaultSettings, ...(s ?? {}) };
   if (!Array.isArray(m.features) || m.features.length === 0) m.features = defaultSettings.features;
+  if (!Array.isArray(m.homeSections) || m.homeSections.length === 0) m.homeSections = defaultSettings.homeSections;
+  if (!m.labelRules) m.labelRules = defaultSettings.labelRules;
   // Old installs stored rose/amber/slate colours that never matched the logo and were never applied; treat them as "not set".
   for (const k of ["primaryColor", "accentColor", "secondaryColor"] as const) if (["#e11d48", "#f59e0b", "#0f172a"].includes(String(m[k] ?? "").toLowerCase())) m[k] = k === "primaryColor" ? "#1E3A8A" : k === "accentColor" ? "#F7941D" : "";
   return m;
@@ -40,17 +43,22 @@ export async function evaluateCoupon(code: string, subtotal: number) {
 }
 
 /* ---------- Orders ---------- */
-const orderNo = () => "DM-" + Array.from({ length: 7 }, () => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[Math.floor(Math.random() * 32)]).join("");
+const ORDER_NO_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I: easy to read out over the phone
+const orderNo = () => "DM-" + Array.from({ length: 7 }, () => ORDER_NO_ALPHABET[randomInt(ORDER_NO_ALPHABET.length)]).join("");
+/** Same key => same order id, so a retried or double-submitted checkout can never create a second order. */
+const orderIdFor = (key?: string) => (key ? createHash("sha256").update("order:" + key).digest("hex").slice(0, 16) : newId());
 
-// Orders are placed one at a time per server instance, so two customers cannot both take the last item.
-let orderLock: Promise<unknown> = Promise.resolve();
+/** Stock is decremented and the order written in ONE atomic step (see db.placeOrder); there is no process-local lock to rely on. */
 export function createOrder(input: z.infer<typeof orderCreateSchema>): Promise<Order> {
-  const run = orderLock.then(() => createOrderNow(input));
-  orderLock = run.catch(() => undefined);
-  return run;
+  return createOrderNow(input);
 }
 
 async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise<Order> {
+  const id = orderIdFor(input.idempotencyKey);
+  if (input.idempotencyKey) { // a retry of an order that already went through: return it untouched (stock may have changed since)
+    const prior = await db.get<Order>("orders", id);
+    if (prior) return prior;
+  }
   const [products, settings, zones] = await Promise.all([db.list<Product>("products"), getSettings(), getZones()]);
   const zone = zones.find((z) => z.id === input.zone);
   if (!zone) throw new ApiError(400, "Please choose a valid delivery area");
@@ -64,7 +72,7 @@ async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise
     const p = map.get(id);
     if (!p || !p.active) throw new ApiError(400, "A product in your cart is no longer available. Please review your cart.");
     if (p.stock < qty) throw new ApiError(409, p.stock <= 0 ? `${p.name} is out of stock` : `Only ${p.stock} of ${p.name} left in stock`);
-    items.push({ id: p.id, name: p.name, unit: p.unit, price: p.price, qty, image: p.image, emoji: p.emoji });
+    items.push({ id: p.id, name: p.name, unit: p.unit, price: p.price, qty, image: p.image, emoji: p.emoji, ...(p.cost !== undefined ? { cost: p.cost } : {}) }); // cost snapshot feeds cost of goods sold
   }
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
   let discount = 0; let couponCode: string | undefined;
@@ -79,45 +87,53 @@ async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise
   if (isManual) {
     if (!input.paymentRef || input.paymentRef.length < 6) throw new ApiError(400, "Enter the Transaction ID (TrxID) of your payment");
     if (!input.paymentFrom || !/^01[3-9]\d{8}$/.test(input.paymentFrom)) throw new ApiError(400, "Enter the mobile number you paid from (01XXXXXXXXX)");
+    const trx = input.paymentRef.trim().toUpperCase();
+    const reused = (await db.find<Order>("orders", "paymentRef", trx)).some((o) => o.id !== id && !RELEASES.has(o.status));
+    if (reused) throw new ApiError(409, "This Transaction ID (TrxID) was already used for another order. Please check it and try again.");
   }
   const hasRx = items.some((i) => map.get(i.id)?.prescriptionRequired);
   const now = new Date().toISOString();
   const order: Order = {
-    id: newId(), orderNo: orderNo(), name: input.name, phone: input.phone, address: input.address, zone: zone.id, zoneName: zone.name, ...(hasRx ? { hasRx: true } : {}),
+    id, orderNo: orderNo(), name: input.name, phone: input.phone, address: input.address, zone: zone.id, zoneName: zone.name, ...(hasRx ? { hasRx: true } : {}),
     payment: input.payment, ...(["cod","bkash","nagad","online"].includes(input.payment) ? {} : { paymentLabel: opt.label }), paymentStatus: isManual ? "pending" : "unpaid",
-    ...(isManual ? { paymentRef: input.paymentRef, paymentFrom: input.paymentFrom } : {}),
+    ...(isManual ? { paymentRef: input.paymentRef!.trim().toUpperCase(), paymentFrom: input.paymentFrom } : {}),
     ...(input.lat !== undefined && input.lng !== undefined ? { lat: input.lat, lng: input.lng } : {}), note: input.note ?? "", items, subtotal, delivery, serviceCharge, discount, ...(couponCode ? { couponCode } : {}),
     total: subtotal - discount + delivery + serviceCharge, status: "pending", createdAt: now, updatedAt: now,
   };
-  // Re-read stock right before writing: the list above can be stale if another order was placed in the meantime.
-  const fresh = new Map<string, Product>();
-  for (const i of items) {
-    const p = await db.get<Product>("products", i.id);
-    if (!p || !p.active) throw new ApiError(400, "A product in your cart is no longer available. Please review your cart.");
-    if (p.stock < i.qty) throw new ApiError(409, p.stock <= 0 ? `${p.name} is out of stock` : `Only ${p.stock} of ${p.name} left in stock`);
-    fresh.set(i.id, p);
+  // Authoritative stock check + decrement + order write: one atomic step, all or nothing.
+  try {
+    const r = await db.placeOrder(order, items.map((i) => ({ id: i.id, qty: i.qty })));
+    return r.order;
+  } catch (e) {
+    if (e instanceof StockError) throw new ApiError(e.kind === "unavailable" ? 400 : 409, e.message);
+    throw e;
   }
-  for (const i of items) { const p = fresh.get(i.id)!; await db.update<Product>("products", p.id, { stock: p.stock - i.qty, sold: p.sold + i.qty, updatedAt: now }); }
-  await db.put("orders", order);
-  return order;
 }
 
 const RELEASES = new Set(["cancelled", "returned"]);
 export async function setOrderStatus(id: string, status: Order["status"]) {
   if (!ORDER_STATUSES.includes(status)) throw new ApiError(400, "Invalid status");
-  const o = await db.get<Order>("orders", id);
-  if (!o) throw new ApiError(404, "Order not found");
-  const patch: Partial<Order> = { status, updatedAt: new Date().toISOString() };
-  if (status === "delivered" && o.payment === "cod") patch.paymentStatus = "paid"; // cash collected on delivery
-  // Return stock once when an order is cancelled/returned; take it back if it is re-opened.
-  if (RELEASES.has(status) && !o.stockRestored) {
-    for (const i of o.items) { const p = await db.get<Product>("products", i.id); if (p) await db.update<Product>("products", p.id, { stock: p.stock + i.qty, sold: Math.max(0, p.sold - i.qty) }); }
-    patch.stockRestored = true;
-  } else if (!RELEASES.has(status) && o.stockRestored) {
-    for (const i of o.items) { const p = await db.get<Product>("products", i.id); if (p) await db.update<Product>("products", p.id, { stock: Math.max(0, p.stock - i.qty), sold: p.sold + i.qty }); }
-    patch.stockRestored = false;
+  const at = new Date().toISOString();
+  // The stock-restored flag is claimed inside ONE atomic update, so two simultaneous cancels can never both give the stock back.
+  const flow: { move: "restore" | "take" | null } = { move: null };
+  const updated = await db.mutate<Order>("orders", id, (cur) => {
+    flow.move = null;
+    if (!cur) return null;
+    const next: Order = { ...cur, status, updatedAt: at };
+    if (status === "delivered" && cur.status !== "delivered") next.deliveredAt = at; // revenue is dated by this, not by later edits
+    if (status === "delivered" && cur.payment === "cod") next.paymentStatus = "paid"; // cash collected on delivery
+    if (RELEASES.has(status) && !cur.stockRestored) { next.stockRestored = true; flow.move = "restore"; }
+    else if (!RELEASES.has(status) && cur.stockRestored) { next.stockRestored = false; flow.move = "take"; }
+    return next;
+  });
+  if (!updated) throw new ApiError(404, "Order not found");
+  const move = flow.move;
+  if (move) for (const i of updated.items) { // each product is changed atomically too
+    await db.mutate<Product>("products", i.id, (p) => !p ? null : move === "restore"
+      ? { ...p, stock: p.stock + i.qty, sold: Math.max(0, p.sold - i.qty) }
+      : { ...p, stock: Math.max(0, p.stock - i.qty), sold: p.sold + i.qty });
   }
-  return (await db.update<Order>("orders", id, patch))!;
+  return updated;
 }
 
 export async function setPaymentStatus(id: string, paymentStatus: NonNullable<Order["paymentStatus"]>) {
@@ -128,7 +144,7 @@ export async function setPaymentStatus(id: string, paymentStatus: NonNullable<Or
 
 /** Rider app: only the orders assigned to this rider. */
 export async function riderOrders(riderId: string) {
-  const all = (await db.list<Order>("orders")).filter((o) => o.riderId === riderId);
+  const all = await db.find<Order>("orders", "riderId", riderId);
   const done = new Set(["delivered", "returned", "cancelled"]);
   const active = all.filter((o) => !done.has(o.status)).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const recent = all.filter((o) => done.has(o.status)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 40);
@@ -155,12 +171,16 @@ export async function assignRider(id: string, riderId: string) {
 
 /* ---------- Inventory ---------- */
 export async function adjustStock(productId: string, mode: "add" | "remove" | "set", qty: number, reason: string) {
-  const p = await db.get<Product>("products", productId);
-  if (!p) throw new ApiError(404, "Product not found");
-  const after = Math.max(0, mode === "add" ? p.stock + qty : mode === "remove" ? p.stock - qty : qty);
   const at = new Date().toISOString();
-  const product = (await db.update<Product>("products", p.id, { stock: after, updatedAt: at }))!;
-  const log: StockLog = { id: newId(), productId: p.id, productName: p.name, before: p.stock, after, change: after - p.stock, reason: reason || (mode === "add" ? "Restock" : mode === "remove" ? "Stock removed" : "Stock count"), createdAt: at };
+  let before = 0, after = 0, name = "";
+  const product = await db.mutate<Product>("products", productId, (p) => { // atomic: a customer order in the same instant cannot be lost
+    if (!p) return null;
+    before = p.stock; name = p.name;
+    after = Math.max(0, mode === "add" ? p.stock + qty : mode === "remove" ? p.stock - qty : qty);
+    return { ...p, stock: after, updatedAt: at };
+  });
+  if (!product) throw new ApiError(404, "Product not found");
+  const log: StockLog = { id: newId(), productId, productName: name, before, after, change: after - before, reason: reason || (mode === "add" ? "Restock" : mode === "remove" ? "Stock removed" : "Stock count"), createdAt: at };
   await db.put("stocklogs", log);
   return { product, log };
 }

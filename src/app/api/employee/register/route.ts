@@ -23,9 +23,9 @@ export const POST = handle(async (req) => {
     emergencyContact: text("emergencyContact") || undefined, emergencyPhone: text("emergencyPhone").replace(/\s|-/g, "") || undefined,
     expectedSalary: text("expectedSalary") || undefined, availableFrom: text("availableFrom") || undefined, preferredShift: text("preferredShift") || undefined,
   });
-  const existing = (await db.list<Employee>("employees")).find((e) => e.phone === d.phone);
+  const existing = (await db.find<Employee>("employees", "phone", d.phone))[0];
   if (existing && existing.status === "pending") throw new ApiError(409, "You have already applied with this number. Your application is under review.");
-  if (existing && existing.status !== "rejected" && existing.active) throw new ApiError(409, "This mobile number is already registered.");
+  if (existing && existing.status !== "rejected") throw new ApiError(409, "This mobile number is already registered. Please sign in or contact the store."); // never overwrite an existing/inactive staff record
   let image: string | undefined;
   const profile = form.get("image") || form.get("profile");
   if (profile instanceof File && profile.size) {

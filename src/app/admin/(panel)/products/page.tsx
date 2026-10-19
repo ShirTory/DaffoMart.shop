@@ -5,8 +5,8 @@ import { Empty, ErrorBox, Field, GalleryUpload, Icon, Modal, PageHeader, PageLoa
 import { discountPct, taka } from "@/lib/format";
 import type { Category, Product } from "@/lib/types";
 
-type Form = { name: string; categoryId: string; price: string; oldPrice: string; unit: string; stock: string; description: string; emoji: string; images: string[]; featured: boolean; active: boolean; genericName: string; manufacturer: string; prescriptionRequired: boolean };
-const blank = (cat = ""): Form => ({ name: "", categoryId: cat, price: "", oldPrice: "", unit: "1 kg", stock: "0", description: "", emoji: "🛒", images: [], featured: false, active: true, genericName: "", manufacturer: "", prescriptionRequired: false });
+type Form = { name: string; sku: string; categoryId: string; price: string; oldPrice: string; unit: string; stock: string; description: string; emoji: string; images: string[]; featured: boolean; active: boolean; genericName: string; manufacturer: string; prescriptionRequired: boolean };
+const blank = (cat = ""): Form => ({ name: "", sku: "", categoryId: cat, price: "", oldPrice: "", unit: "1 kg", stock: "0", description: "", emoji: "🛒", images: [], featured: false, active: true, genericName: "", manufacturer: "", prescriptionRequired: false });
 
 export default function ProductsPage() {
   const toast = useToast(); const { confirm, node } = useConfirm();
@@ -16,21 +16,35 @@ export default function ProductsPage() {
 
   const catName = (id: string) => cats.data?.find((c) => c.id === id)?.name ?? "—";
   const list = useMemo(() => (prods.data?.items ?? []).filter((p) =>
-    (!q || p.name.toLowerCase().includes(q.toLowerCase())) && (!cat || p.categoryId === cat) &&
+    (!q || p.name.toLowerCase().includes(q.toLowerCase()) || (p.sku || "").toLowerCase().includes(q.toLowerCase())) && (!cat || p.categoryId === cat) &&
     (!flt || (flt === "low" ? p.stock > 0 && p.stock <= 10 : flt === "out" ? p.stock <= 0 : flt === "hidden" ? !p.active : p.featured))), [prods.data, q, cat, flt]);
 
-  const open = (p?: Product) => { setErrs({}); setEdit(p ? { id: p.id, f: { name: p.name, categoryId: p.categoryId, price: String(p.price), oldPrice: p.oldPrice ? String(p.oldPrice) : "", unit: p.unit, stock: String(p.stock), description: p.description, emoji: p.emoji, images: p.images?.length ? p.images : p.image ? [p.image] : [], featured: p.featured, active: p.active, genericName: p.genericName ?? "", manufacturer: p.manufacturer ?? "", prescriptionRequired: !!p.prescriptionRequired } } : { f: blank(cats.data?.[0]?.id) }); };
+  const open = (p?: Product) => { setErrs({}); setEdit(p ? { id: p.id, f: { name: p.name, sku: p.sku ?? "", categoryId: p.categoryId, price: String(p.price), oldPrice: p.oldPrice ? String(p.oldPrice) : "", unit: p.unit, stock: String(p.stock), description: p.description, emoji: p.emoji, images: p.images?.length ? p.images : p.image ? [p.image] : [], featured: p.featured, active: p.active, genericName: p.genericName ?? "", manufacturer: p.manufacturer ?? "", prescriptionRequired: !!p.prescriptionRequired } } : { f: blank(cats.data?.[0]?.id) }); };
   const set = <K extends keyof Form>(k: K, v: Form[K]) => setEdit((e) => (e ? { ...e, f: { ...e.f, [k]: v } } : e));
 
   const save = async () => {
     if (!edit) return; setBusy(true); setErrs({});
     const f = edit.f; const isMed = cats.data?.find((c) => c.id === f.categoryId)?.kind === "medicine";
-    const body = { name: f.name, categoryId: f.categoryId, price: f.price, oldPrice: f.oldPrice || undefined, unit: f.unit, stock: f.stock, description: f.description, emoji: f.emoji || "🛒", image: f.images[0], images: f.images, featured: f.featured, active: f.active, genericName: f.genericName || undefined, manufacturer: f.manufacturer || undefined, prescriptionRequired: isMed && f.prescriptionRequired };
+    const body = { name: f.name, sku: f.sku || undefined, categoryId: f.categoryId, price: f.price, oldPrice: f.oldPrice || undefined, unit: f.unit, stock: f.stock, description: f.description, emoji: f.emoji || "🛒", image: f.images[0], images: f.images, featured: f.featured, active: f.active, genericName: f.genericName || undefined, manufacturer: f.manufacturer || undefined, prescriptionRequired: isMed && f.prescriptionRequired };
     try {
       const saved = await api<Product>(edit.id ? `/api/products/${edit.id}` : "/api/products", { method: edit.id ? "PUT" : "POST", body, ...(edit.id ? {} : {}) });
       prods.setData((d) => ({ items: edit.id ? d!.items.map((x) => (x.id === saved.id ? saved : x)) : [saved, ...(d?.items ?? [])] }));
       toast(edit.id ? "Product updated" : "Product added"); setEdit(null);
     } catch (e: any) { if (e instanceof ApiClientError) setErrs(e.fields); toast(e.message, "err"); } finally { setBusy(false); }
+  };
+  const backfillSku = async (apply: boolean) => {
+    setBusy(true);
+    try {
+      const r = await api<{ count: number; plan: { name: string; sku: string }[]; apply: boolean }>("/api/admin/sku-backfill", { method: "POST", body: { apply, prefix: "DM" } });
+      if (!apply) {
+        toast(r.count ? `Preview: ${r.count} products need SKU` : "All active products have SKU");
+        if (r.count) console.table(r.plan);
+      } else {
+        toast(`Applied ${r.count} SKUs`);
+        prods.reload();
+      }
+    } catch (e: any) { toast(e.message, "err"); }
+    finally { setBusy(false); }
   };
   const del = async (p: Product) => {
     if (!(await confirm(`Delete "${p.name}"? This cannot be undone.`))) return;
@@ -43,7 +57,11 @@ export default function ProductsPage() {
   const f = edit?.f; const medForm = !!f && cats.data?.find((c) => c.id === f.categoryId)?.kind === "medicine";
   return (
     <>
-      <PageHeader title="Products" subtitle={`${prods.data?.items.length ?? 0} products in your catalogue`}><button className="btn-primary" onClick={() => open()} disabled={!cats.data?.length}><Icon name="plus" className="h-4 w-4" />Add product</button></PageHeader>
+      <PageHeader title="Products" subtitle={`${prods.data?.items.length ?? 0} products in your catalogue`}>
+        <button type="button" className="btn-outline" disabled={busy} onClick={() => backfillSku(false)}>Preview missing SKUs</button>
+        <button type="button" className="btn-outline" disabled={busy} onClick={async () => { if (await confirm("Apply unique SKUs to all active products missing SKU? Existing SKUs are never changed.")) backfillSku(true); }}>Backfill SKUs</button>
+        <button className="btn-primary" onClick={() => open()} disabled={!cats.data?.length}><Icon name="plus" className="h-4 w-4" />Add product</button>
+      </PageHeader>
       <div className="card overflow-hidden">
         <div className="flex flex-wrap gap-3 border-b p-4">
           <div className="relative min-w-[220px] flex-1"><Icon name="search" className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" /><input className="input pl-9" placeholder="Search products…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
@@ -52,10 +70,11 @@ export default function ProductsPage() {
         </div>
         {prods.loading ? <PageLoader /> : prods.error ? <div className="p-4"><ErrorBox msg={prods.error} retry={prods.reload} /></div> : list.length === 0 ? <Empty title="No products found" hint="Add your first product with photos, price and stock." action={<button className="btn-primary" onClick={() => open()}>Add product</button>} /> : (
           <div className="scroll-thin overflow-x-auto"><table className="w-full min-w-[860px]">
-            <thead className="bg-gray-50"><tr><th className="th">Product</th><th className="th">Category</th><th className="th">Price</th><th className="th">Stock</th><th className="th">Visible</th><th className="th text-right">Actions</th></tr></thead>
+            <thead className="bg-gray-50"><tr><th className="th">Product</th><th className="th">SKU</th><th className="th">Category</th><th className="th">Price</th><th className="th">Stock</th><th className="th">Visible</th><th className="th text-right">Actions</th></tr></thead>
             <tbody className="divide-y">{list.map((p) => (
               <tr key={p.id} className="hover:bg-gray-50">
                 <td className="td"><div className="flex items-center gap-3"><Thumb src={p.image} emoji={p.emoji} className="h-12 w-12" /><div className="min-w-0"><p className="max-w-[240px] truncate font-semibold">{p.name} {p.featured && <span title="Featured" className="text-accent">★</span>}</p><p className="text-xs text-gray-500">{p.unit}</p></div></div></td>
+                <td className="td font-mono text-xs text-gray-600">{p.sku || (p.active ? <span className="badge bg-amber-100 text-amber-800">Missing SKU</span> : <span className="text-gray-400">—</span>)}</td>
                 <td className="td text-gray-600">{catName(p.categoryId)}</td>
                 <td className="td"><span className="font-semibold">{taka(p.price)}</span>{p.oldPrice ? <span className="ml-2 text-xs text-gray-400 line-through">{taka(p.oldPrice)}</span> : null}{discountPct(p.price, p.oldPrice) > 0 && <span className="ml-2 badge bg-accent-soft text-accent-dark">-{discountPct(p.price, p.oldPrice)}%</span>}</td>
                 <td className="td"><StatusBadge status={p.stock <= 0 ? "out" : p.stock <= 10 ? "low" : "active"} label={p.stock <= 0 ? "Out of stock" : `${p.stock} in stock`} /></td>
@@ -71,6 +90,7 @@ export default function ProductsPage() {
             <GalleryUpload value={f.images} onChange={(v) => set("images", v)} />
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Product name" error={errs.name} className="sm:col-span-2"><input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="e.g. Fresh Tomato" /></Field>
+              <Field label="SKU" error={errs.sku} hint="Required when Visible. Unique (e.g. DM-TOMATO-1KG)"><input className="input uppercase" value={f.sku} onChange={(e) => set("sku", e.target.value.toUpperCase())} placeholder="e.g. DM-TOMATO-1KG" maxLength={64} /></Field>
               <Field label="Category" error={errs.categoryId}><select className="input" value={f.categoryId} onChange={(e) => set("categoryId", e.target.value)}><option value="">Select…</option>{cats.data?.map((c) => <option key={c.id} value={c.id}>{c.kind === "medicine" ? "💊 " : ""}{c.name}</option>)}</select></Field>
               <Field label="Unit" hint="e.g. 1 kg, 12 pcs, 500 ml"><input className="input" value={f.unit} onChange={(e) => set("unit", e.target.value)} /></Field>
               <Field label="Price (৳)" error={errs.price}><input className="input" type="number" min="0" step="any" value={f.price} onChange={(e) => set("price", e.target.value)} /></Field>

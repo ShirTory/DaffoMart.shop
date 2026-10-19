@@ -55,3 +55,18 @@ Riders apply at `/rider/register` (name, mobile, password, permanent + present a
 
 ## Speed
 Storefront pages and product data are cached (`src/server/queries.ts`) and refresh immediately when the admin saves a product, category, banner, offer, setting or delivery area (and at most every 60 seconds otherwise). Orders and the admin panel always read live data. Product photos are served resized by the Next.js image optimizer. Because the home, contact and product pages are pre-rendered, the first `npm run build` reads the database once: set the FIREBASE_* variables before the first deploy.
+
+
+## Release checklist (run before every production deploy)
+1. `npm ci && npm run lint && npm test && npm run build` — all must pass on Node 20/22.
+2. Production env vars set: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `AUTH_SECRET` (32+ random chars), `NEXT_PUBLIC_SITE_URL`, all `FIREBASE_*`. **`PAYMENT_TEST_MODE` must NOT be set.**
+3. Deploy `firestore.rules` and `storage.rules` (`firebase deploy --only firestore:rules,storage`). The app uses the Admin SDK, which bypasses them; they protect against direct client access.
+4. Export a Firestore backup first (Console → Firestore → Import/Export, or `gcloud firestore export`).
+5. Deploy to a Netlify preview/staging site and run the smoke tests in `docs/TESTING.md`.
+6. Promote to production.
+
+## Rollback
+- **Code:** Netlify → Deploys → pick the previous successful deploy → *Publish deploy*. No build needed.
+- **Data:** this release only *adds* optional data (`Order.deliveredAt`; order IDs derived from a checkout key). Older code ignores both, so rolling the code back needs no data change. Nothing is deleted or renamed.
+- **Rules:** re-deploy the previous `firestore.rules` from git history.
+- If anything corrupts data, restore from the Firestore export taken in step 4. Never run destructive operations on production without a fresh export.

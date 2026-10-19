@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,20 +8,21 @@ import { api } from "@/lib/api";
 import { useCart } from "@/lib/store";
 import { saveLastOrder } from "@/lib/lastOrder";
 import { useCartSync, useCoupon } from "@/lib/hooks";
-import { taka } from "@/lib/format";
+import { normPhone, taka } from "@/lib/format";
 import { mapsEmbed } from "@/lib/maps";
 import type { DeliveryZone, PaymentOption } from "@/lib/types";
+import CartNotice from "@/components/store/CartNotice";
 import { useT } from "./TextsProvider";
 
 const schema = z.object({
   name: z.string().trim().min(2, "Enter your full name"),
-  phone: z.string().trim().regex(/^01[3-9]\d{8}$/, "Enter a valid mobile number (01XXXXXXXXX)"),
+  phone: z.string().transform(normPhone).pipe(z.string().regex(/^01[3-9]\d{8}$/, "Enter a valid mobile number (01XXXXXXXXX)")),
   address: z.string().trim().min(8, "Enter your full address"),
   zone: z.string().min(1, "Choose a delivery area"),
   note: z.string().optional(),
   payment: z.string().min(1, "Choose a payment method"),
   paymentRef: z.string().trim().optional(),
-  paymentFrom: z.string().trim().optional(),
+  paymentFrom: z.string().transform(normPhone).optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -30,6 +31,16 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
   const [mounted, setMounted] = useState(false); const [placed, setPlaced] = useState<{ orderNo: string; phone: string; payLater?: boolean } | null>(null); const [error, setError] = useState("");
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(null); const [locMsg, setLocMsg] = useState(""); const [locBusy, setLocBusy] = useState(false);
   useEffect(() => setMounted(true), []);
+  // One random key per distinct cart: a double-tap, slow network retry or re-submit sends the SAME key, so the server returns the same order.
+  const attempt = useRef<{ fp: string; key: string } | null>(null);
+  const attemptKey = () => {
+    const fp = items.map((i) => `${i.id}x${i.qty}`).sort().join(",");
+    if (!attempt.current || attempt.current.fp !== fp) {
+      const rnd = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().replace(/-/g, "") : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+      attempt.current = { fp, key: rnd };
+    }
+    return attempt.current.key;
+  };
   useCartSync();
   const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { zone: zones[0]?.id ?? "", payment: (payments.find((p) => !p.disabled) ?? payments[0])?.id ?? "" } });
   const zone = watch("zone"); const pay = watch("payment"); const payOpt = payments.find((p) => p.id === pay);
@@ -56,7 +67,7 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
     try {
       const selected = payments.find((p) => p.id === d.payment);
       const manual = d.payment === "bkash" || d.payment === "nagad" || (d.payment !== "cod" && d.payment !== "online" && selected?.requireTrx !== false);
-      const r = await api<{ orderNo: string }>("/api/orders", { method: "POST", body: { ...d, paymentRef: manual ? d.paymentRef : undefined, paymentFrom: manual ? d.paymentFrom : undefined, lat: pin?.lat, lng: pin?.lng, couponCode: c.code || undefined, items: items.map((i) => ({ id: i.id, qty: i.qty })) } });
+      const r = await api<{ orderNo: string }>("/api/orders", { method: "POST", body: { ...d, paymentRef: manual ? d.paymentRef : undefined, paymentFrom: manual ? d.paymentFrom : undefined, lat: pin?.lat, lng: pin?.lng, couponCode: c.code || undefined, idempotencyKey: attemptKey(), items: items.map((i) => ({ id: i.id, qty: i.qty })) } });
       let payLater = false;
       if (d.payment === "online") { // hand over to the payment gateway page
         try { const g = await api<{ url: string }>("/api/payments/online/init", { method: "POST", body: { orderNo: r.orderNo, phone: d.phone } }); saveLastOrder(r.orderNo, items.map((i) => ({ id: i.id, name: i.name, unit: i.unit, price: i.price, qty: i.qty, image: i.image, emoji: i.emoji }))); clear(); window.location.href = g.url; return; }
@@ -83,6 +94,7 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_360px]">
       <div className="space-y-5 rounded-2xl border bg-white p-5 shadow-card sm:p-6">
+        <CartNotice />
         <div><h1 className="text-xl font-bold">{t("checkout.details")}</h1><p className="text-sm text-gray-500">No account needed — just tell us where to deliver.</p></div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div><label className="label">Full name</label><input className="input" placeholder="Your name" autoComplete="name" {...register("name")} /><Err m={errors.name?.message} /></div>

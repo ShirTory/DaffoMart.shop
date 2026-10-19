@@ -5,11 +5,55 @@ import { ErrorBox, Field, Icon, ImageUpload, PageHeader, PageLoader, Spinner, To
 import type { Feature, JobPosition, StoreSettings } from "@/lib/types";
 import { FEATURE_ICON_KEYS } from "@/components/store/FeatureIcon";
 
-type F = Pick<StoreSettings, "logo" | "heroTitle" | "heroSubtitle" | "heroCta" | "features" | "showMedicine" | "medicineTitle" | "medicineSubtitle" | "medicineNotice" | "footerText" | "positions" | "joinTitle" | "joinIntro">;
+type HomeSec = { id: string; visible: boolean };
+const SECTION_LABELS: Record<string, string> = {
+  hero: "Hero / Banner",
+  features: "Trust strip (delivery, COD…)",
+  categories: "Category icons",
+  buyAgain: "Buy again",
+  best: "Best Sellers",
+  daily: "Daily Essentials",
+  fresh: "Fresh Food & Grocery",
+  household: "Household Essentials",
+  offers: "Offers",
+  sale: "Hot deals (discounted)",
+  medicine: "Medicine & Healthcare",
+  new: "New arrivals",
+};
+const DEFAULT_SECTIONS: HomeSec[] = [
+  { id: "hero", visible: true },
+  { id: "features", visible: true },
+  { id: "categories", visible: true },
+  { id: "buyAgain", visible: true },
+  { id: "best", visible: true },
+  { id: "daily", visible: true },
+  { id: "fresh", visible: true },
+  { id: "household", visible: true },
+  { id: "offers", visible: true },
+  { id: "sale", visible: true },
+  { id: "medicine", visible: true },
+  { id: "new", visible: true },
+];
+type F = Pick<StoreSettings, "logo" | "heroTitle" | "heroSubtitle" | "heroCta" | "features" | "showMedicine" | "medicineTitle" | "medicineSubtitle" | "medicineNotice" | "footerText" | "positions" | "joinTitle" | "joinIntro" | "homeDailyTitle" | "homeFreshTitle" | "homeHouseholdTitle" | "homeBestTitle" | "homeDailyCatIds" | "homeFreshCatIds" | "homeHouseholdCatIds" | "labelRules" | "customerNidEnabled"> & { homeSections: HomeSec[] };
 export default function ContentPage() {
   const toast = useToast(); const { data, loading, error, reload } = useList<StoreSettings>("/api/settings");
   const [f, setF] = useState<F | null>(null); const [busy, setBusy] = useState(false); const [errs, setErrs] = useState<Record<string, string>>({});
-  useEffect(() => { if (data) setF({ logo: data.logo, heroTitle: data.heroTitle, heroSubtitle: data.heroSubtitle, heroCta: data.heroCta, features: data.features, showMedicine: data.showMedicine, medicineTitle: data.medicineTitle, medicineSubtitle: data.medicineSubtitle, medicineNotice: data.medicineNotice, footerText: data.footerText, positions: data.positions ?? [], joinTitle: data.joinTitle, joinIntro: data.joinIntro }); }, [data]);
+  useEffect(() => { if (data) setF({
+    logo: data.logo, heroTitle: data.heroTitle, heroSubtitle: data.heroSubtitle, heroCta: data.heroCta,
+    features: data.features, showMedicine: data.showMedicine, medicineTitle: data.medicineTitle,
+    medicineSubtitle: data.medicineSubtitle, medicineNotice: data.medicineNotice, footerText: data.footerText,
+    positions: data.positions ?? [], joinTitle: data.joinTitle, joinIntro: data.joinIntro,
+    homeSections: (data.homeSections?.length ? data.homeSections : DEFAULT_SECTIONS).map((s) => ({ id: s.id, visible: s.visible !== false })),
+    homeDailyTitle: data.homeDailyTitle || "Daily Essentials",
+    homeFreshTitle: data.homeFreshTitle || "Fresh Food & Grocery",
+    homeHouseholdTitle: data.homeHouseholdTitle || "Household Essentials",
+    homeBestTitle: data.homeBestTitle || "Best Sellers",
+    homeDailyCatIds: data.homeDailyCatIds || [],
+    homeFreshCatIds: data.homeFreshCatIds || [],
+    homeHouseholdCatIds: data.homeHouseholdCatIds || [],
+    labelRules: data.labelRules || { showBestSeller: true, bestSellerMinSold: 5, showNewArrival: true, newArrivalDays: 14, showOffer: true, showOutOfStock: true },
+    customerNidEnabled: data.customerNidEnabled === true,
+  }); }, [data]);
   if (loading) return <PageLoader />; if (error || !f) return <ErrorBox msg={error || "Failed to load"} retry={reload} />;
   const set = <K extends keyof F>(k: K, v: F[K]) => setF({ ...f, [k]: v });
   const txt = (k: keyof F) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => set(k, e.target.value as never);
@@ -125,6 +169,64 @@ export default function ContentPage() {
           </div>
         </section>
       </div>
+
+      <div className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Homepage sections</h2>
+          <p className="text-sm text-gray-500">Reorder and show/hide blocks on the storefront home page. Empty product sections hide automatically.</p>
+        </div>
+        <ul className="divide-y rounded-xl border">
+          {f.homeSections.map((s, i) => (
+            <li key={s.id} className="flex flex-wrap items-center gap-3 px-3 py-2.5">
+              <span className="w-6 text-center text-xs font-bold text-gray-400">{i + 1}</span>
+              <span className="min-w-[140px] flex-1 text-sm font-semibold text-gray-800">{SECTION_LABELS[s.id] || s.id}</span>
+              <Toggle checked={s.visible} onChange={(v) => set("homeSections", f.homeSections.map((x, k) => k === i ? { ...x, visible: v } : x))} label={s.visible ? "Visible" : "Hidden"} />
+              <div className="flex gap-1">
+                <button type="button" className="btn-ghost btn-sm" disabled={i === 0} onClick={() => {
+                  const next = [...f.homeSections];
+                  [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                  set("homeSections", next);
+                }} aria-label="Move up">↑</button>
+                <button type="button" className="btn-ghost btn-sm" disabled={i === f.homeSections.length - 1} onClick={() => {
+                  const next = [...f.homeSections];
+                  [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                  set("homeSections", next);
+                }} aria-label="Move down">↓</button>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Best Sellers title"><input className="input" value={f.homeBestTitle || ""} onChange={(e) => set("homeBestTitle", e.target.value)} /></Field>
+          <Field label="Daily Essentials title"><input className="input" value={f.homeDailyTitle || ""} onChange={(e) => set("homeDailyTitle", e.target.value)} /></Field>
+          <Field label="Fresh Food title"><input className="input" value={f.homeFreshTitle || ""} onChange={(e) => set("homeFreshTitle", e.target.value)} /></Field>
+          <Field label="Household title"><input className="input" value={f.homeHouseholdTitle || ""} onChange={(e) => set("homeHouseholdTitle", e.target.value)} /></Field>
+        </div>
+        <p className="text-xs text-gray-500">Category IDs for Daily / Fresh / Household (comma-separated). Leave empty to use Featured / Newest / hide Household. Copy IDs from Admin → Categories.</p>
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Daily category IDs"><input className="input font-mono text-xs" value={(f.homeDailyCatIds || []).join(",")} onChange={(e) => set("homeDailyCatIds", e.target.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean))} placeholder="id1, id2" /></Field>
+          <Field label="Fresh category IDs"><input className="input font-mono text-xs" value={(f.homeFreshCatIds || []).join(",")} onChange={(e) => set("homeFreshCatIds", e.target.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean))} placeholder="id1, id2" /></Field>
+          <Field label="Household category IDs"><input className="input font-mono text-xs" value={(f.homeHouseholdCatIds || []).join(",")} onChange={(e) => set("homeHouseholdCatIds", e.target.value.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean))} placeholder="id1, id2" /></Field>
+        </div>
+      </div>
+
+
+      <div className="card space-y-4 p-5">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Product card labels</h2>
+          <p className="text-sm text-gray-500">Labels use real data only (sold count, created date, discount, stock). Never fabricated.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Toggle checked={!!f.labelRules?.showBestSeller} onChange={(v) => set("labelRules", { ...f.labelRules!, showBestSeller: v })} label="Show Best Seller" />
+          <Field label="Best Seller min sold"><input className="input" type="number" min={1} value={f.labelRules?.bestSellerMinSold ?? 5} onChange={(e) => set("labelRules", { ...f.labelRules!, bestSellerMinSold: Number(e.target.value) || 5 })} /></Field>
+          <Toggle checked={!!f.labelRules?.showNewArrival} onChange={(v) => set("labelRules", { ...f.labelRules!, showNewArrival: v })} label="Show New Arrival" />
+          <Field label="New Arrival days"><input className="input" type="number" min={1} value={f.labelRules?.newArrivalDays ?? 14} onChange={(e) => set("labelRules", { ...f.labelRules!, newArrivalDays: Number(e.target.value) || 14 })} /></Field>
+          <Toggle checked={!!f.labelRules?.showOffer} onChange={(v) => set("labelRules", { ...f.labelRules!, showOffer: v })} label="Show Offer / discount badge" />
+          <Toggle checked={!!f.labelRules?.showOutOfStock} onChange={(v) => set("labelRules", { ...f.labelRules!, showOutOfStock: v })} label="Show Out of Stock badge" />
+        </div>
+        <Toggle checked={!!f.customerNidEnabled} onChange={(v) => set("customerNidEnabled", v)} label="Enable optional customer NID collection (privacy-sensitive — off by default)" />
+      </div>
+
     </>
   );
 }

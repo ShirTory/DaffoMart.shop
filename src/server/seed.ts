@@ -27,6 +27,30 @@ export const defaultSettings: StoreSettings = {
   payCod: true, payBkash: false, bkashNumber: "", payNagad: false, nagadNumber: "", payOnline: true,
   payInstructions: "Send the total amount using “Send Money”, then enter the Transaction ID (TrxID) at checkout. We confirm your order after verifying the payment.",
   showMedicine: true, medicineTitle: "Medicine & Healthcare", medicineSubtitle: "Trusted medicines and health products, delivered fast.",
+  homeSections: [
+    { id: "hero", visible: true },
+    { id: "features", visible: true },
+    { id: "categories", visible: true },
+    { id: "best", visible: true },
+    { id: "daily", visible: true },
+    { id: "fresh", visible: true },
+    { id: "household", visible: true },
+    { id: "offers", visible: true },
+    { id: "sale", visible: true },
+    { id: "medicine", visible: true },
+    { id: "new", visible: true },
+    { id: "buyAgain", visible: true },
+  ],
+  homeDailyTitle: "Daily Essentials",
+  homeFreshTitle: "Fresh Food & Grocery",
+  homeHouseholdTitle: "Household Essentials",
+  homeBestTitle: "Best Sellers",
+  labelRules: {
+    showBestSeller: true, bestSellerMinSold: 5,
+    showNewArrival: true, newArrivalDays: 14,
+    showOffer: true, showOutOfStock: true,
+  },
+  customerNidEnabled: false,
   emptyStateTitle: "No products found",
   emptyStateText: "Try a different search or category. Fresh stock arrives daily.",
   emptyStateIcon: "🔍",
@@ -64,6 +88,7 @@ async function seedZones(s: StoreSettings) {
   for (const x of z) await rawDb.put("zones", x.id, x);
 }
 
+const DEMO = () => process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "true"; // production starts with NO demo products / fake sales counts
 async function seedMedicine() {
   const cats: [string, string, string][] = [["med-otc", "Medicine (OTC)", "💊"], ["med-health", "Healthcare", "🩺"]];
   for (const [i, [id, name, emoji]] of cats.entries()) {
@@ -82,7 +107,7 @@ async function seedMedicine() {
   for (const [name, genericName, manufacturer, price, unit, emoji, categoryId, stock, rx] of M) {
     const id = newId();
     const p: Product = { id, slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + id.slice(0, 4), name, description: `${name} — genuine medicine/health product. Please read the label and use as directed.`, price, unit, emoji, images: [], categoryId, stock, rating: 0, sold: 0, featured: false, active: true, prescriptionRequired: rx, ...(genericName ? { genericName } : {}), ...(manufacturer ? { manufacturer } : {}), createdAt: now(), updatedAt: now() };
-    await rawDb.put("products", id, p);
+    if (DEMO()) await rawDb.put("products", id, p);
   }
 }
 
@@ -113,7 +138,7 @@ export async function seedIfEmpty() {
   for (const [slug, name, price, oldPrice, unit, emoji, categoryId, stock, rating, sold, featured] of P) {
     const id = newId();
     const p: Product = { id, slug, name, description: `Fresh, quality-checked ${name.toLowerCase()} delivered to your door.`, price, ...(oldPrice ? { oldPrice } : {}), unit, emoji, images: [], categoryId, stock, rating, sold, featured, active: true, createdAt: now(), updatedAt: now() };
-    await rawDb.put("products", id, p);
+    if (DEMO()) await rawDb.put("products", id, p);
   }
   await seedZones(defaultSettings);
   await seedMedicine();

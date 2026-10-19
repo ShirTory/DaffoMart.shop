@@ -11,7 +11,7 @@ export const GET = handle(async (req) => {
   rateLimit(`track:${clientIp(req)}`, 20, 10 * 60_000);
   const u = new URL(req.url).searchParams; const no = (u.get("no") ?? "").trim().toUpperCase(), phone = normPhone((u.get("phone") ?? "").trim());
   if (!no || !phone) throw new ApiError(400, "Enter your order number and phone number");
-  const o = (await db.list<Order>("orders")).find((x) => x.orderNo === no && x.phone === phone);
+  const o = (await db.find<Order>("orders", "orderNo", no)).find((x) => x.phone === phone);
   if (!o) throw new ApiError(404, "No order found with these details");
   const needRider = o.riderId && ["assigned", "picked_up", "on_the_way", "delivered"].includes(o.status);
   const r = needRider ? await db.get<Rider>("riders", o.riderId!) : null;
@@ -24,16 +24,16 @@ export const GET = handle(async (req) => {
 
   // existing rating / issues for this order
   const existingRating = o.status === "delivered" && o.riderId
-    ? (await db.list<RiderRating>("ratings")).find((x) => x.orderId === o.id)
+    ? (await db.find<RiderRating>("ratings", "orderId", o.id))[0]
     : null;
-  const issues = (await db.list<OrderIssue>("issues")).filter((i) => i.orderId === o.id);
+  const issues = await db.find<OrderIssue>("issues", "orderId", o.id);
 
   return ok({
     id: o.id,
     ...(typeof o.lat === "number" && typeof o.lng === "number" ? { dest: { lat: o.lat, lng: o.lng } } : {}),
     ...(riderLoc ? { riderLoc } : {}),
     orderNo: o.orderNo, status: o.status, createdAt: o.createdAt, updatedAt: o.updatedAt,
-    items: o.items, subtotal: o.subtotal, delivery: o.delivery, serviceCharge: o.serviceCharge ?? 0, discount: o.discount, total: o.total,
+    items: o.items.map(({ cost, ...i }) => i), subtotal: o.subtotal, delivery: o.delivery, serviceCharge: o.serviceCharge ?? 0, discount: o.discount, total: o.total,
     payment: o.payment, paymentStatus: o.paymentStatus, zoneName: o.zoneName,
     ...(zone?.eta ? { eta: zone.eta } : {}),
     canCancel, ...(cancelEndsAt ? { cancelEndsAt } : {}),

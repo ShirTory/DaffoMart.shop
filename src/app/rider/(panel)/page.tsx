@@ -74,7 +74,7 @@ function Dashboard() {
     <div className="mx-auto min-h-screen max-w-2xl bg-gray-100 pb-10">
       <header className="sticky top-0 z-20 flex items-center justify-between bg-primary-deeper px-4 py-3 text-white">
         <div><p className="text-xs text-white/60">Rider dashboard</p><p className="font-bold">{me?.name ?? "…"}</p></div>
-        <div className="flex gap-2"><button onClick={load} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">↻ Refresh</button><button onClick={logout} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"><Icon name="out" className="inline h-4 w-4" /> Sign out</button></div>
+        <div className="flex gap-2"><a href="/rider/earnings" className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">৳ Earnings</a><button onClick={load} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold">↻ Refresh</button><button onClick={logout} className="rounded-lg bg-white/10 px-3 py-2 text-xs font-semibold"><Icon name="out" className="inline h-4 w-4" /> Sign out</button></div>
       </header>
 
       <div className={`mx-3 mt-3 flex items-center justify-between gap-3 rounded-xl p-3 text-sm shadow-card ${share && gps.state === "live" ? "bg-emerald-50" : gps.state === "denied" || gps.state === "error" || gps.state === "unsupported" ? "bg-red-50" : "bg-white"}`}>
@@ -155,7 +155,7 @@ function Dashboard() {
                   {issueFor === o.id && (
                     <div className="space-y-2 rounded-xl border border-red-200 bg-red-50 p-3">
                       <textarea className="input" rows={2} placeholder="What went wrong?" value={issueText} onChange={(e) => setIssueText(e.target.value)} />
-                      <input type="file" accept="image/*,video/*" multiple className="input" onChange={(e) => setIssueFiles(e.target.files)} />
+                      <input type="file" accept="image/*" multiple className="input" onChange={(e) => setIssueFiles(e.target.files)} />
                       <button type="button" className="btn bg-red-600 text-white hover:bg-red-700 btn-sm w-full" disabled={issueBusy} onClick={() => reportIssue(o)}>{issueBusy ? "Sending…" : "Submit issue"}</button>
                     </div>
                   )}

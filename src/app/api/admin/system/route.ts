@@ -1,5 +1,6 @@
-import { requireAdmin, usingDevCredentials } from "@/server/auth";
-import { firebaseAdmin, firebaseConfigured, storageMode } from "@/server/db";
+import { requireSession, usingDevCredentials } from "@/server/auth";
+import { firebaseAdmin, firebaseConfigured, storageMode, storageProblem } from "@/server/db";
+import { productionProblems } from "@/server/envCheck";
 import { handle, ok } from "@/server/http";
 import { gatewayInfo } from "@/server/payments";
 import { imagesInDb } from "@/server/storage";
@@ -7,9 +8,11 @@ export const dynamic = "force-dynamic";
 
 /** GET: storage mode. GET ?test=1: really talks to Firestore + Storage and reports the result. */
 export const GET = handle(async (req) => {
-  await requireAdmin();
+  await requireSession();
+  const problem = storageProblem();
+  if (problem) return ok({ storage: "unavailable", persistent: false, problems: productionProblems(), devCredentials: usingDevCredentials() });
   const mode = storageMode();
-  const base = { storage: mode, persistent: mode === "firestore", devCredentials: usingDevCredentials(), vercel: Boolean(process.env.VERCEL || process.env.NETLIFY), gateway: gatewayInfo(), mapsKey: Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
+  const base = { problems: process.env.NODE_ENV === "production" ? productionProblems() : [], storage: mode, persistent: mode === "firestore", devCredentials: usingDevCredentials(), vercel: Boolean(process.env.VERCEL || process.env.NETLIFY), gateway: gatewayInfo(), mapsKey: Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
     firebase: { configured: firebaseConfigured(), projectId: process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "", bucket: process.env.FIREBASE_STORAGE_BUCKET || process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "" } };
   if (new URL(req.url).searchParams.get("test") !== "1") return ok(base);
   const test: { firestore: string; storage: string } = { firestore: "not configured", storage: "not configured" };

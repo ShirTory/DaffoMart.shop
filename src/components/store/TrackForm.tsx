@@ -274,8 +274,8 @@ const stillCanCancel = !!o?.canCancel && cancelSecsLeft > 0;
             <div className="rounded-xl border border-red-200 bg-red-50 p-4">
               <p className="text-sm font-bold text-red-900">Report an issue</p>
               <textarea className="input mt-2" rows={3} required placeholder="Describe the problem…" value={issueText} onChange={(e) => setIssueText(e.target.value)} />
-              <input type="file" accept="image/*,video/*" multiple className="input mt-2" onChange={(e) => setIssueFiles(e.target.files)} />
-              <p className="mt-1 text-xs text-gray-500">You can attach photos or a short video (optional).</p>
+              <input type="file" accept="image/*" multiple className="input mt-2" onChange={(e) => setIssueFiles(e.target.files)} />
+              <p className="mt-1 text-xs text-gray-500">You can attach up to 5 photos (optional).</p>
               <button type="button" className="btn bg-red-600 text-white hover:bg-red-700 btn-sm mt-2" disabled={issueBusy || !issueText.trim()} onClick={submitIssue}>{issueBusy ? "Sending…" : "Submit issue"}</button>
             </div>
           )}

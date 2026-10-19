@@ -36,4 +36,5 @@ export function rateLimit(key: string, max: number, windowMs: number) {
   if (!h || h.reset < now) { hits.set(key, { n: 1, reset: now + windowMs }); if (hits.size > 5000) for (const [k, v] of hits) if (v.reset < now) hits.delete(k); return; }
   if (++h.n > max) throw new ApiError(429, "Too many requests. Please try again in a few minutes.");
 }
-export const clientIp = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "local";
+export const clientIp = (req: Request) =>
+  req.headers.get("x-nf-client-connection-ip")?.trim() || req.headers.get("x-real-ip")?.trim() || req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "local"; // Netlify / proxy-set headers first: a browser can fake X-Forwarded-For

@@ -1,46 +1,26 @@
-# dependencies
+# dependencies / build output
 node_modules/
-.pnp
-.pnp.js
-
-# build / Next.js
 .next/
 out/
-build/
-dist/
 *.tsbuildinfo
+.netlify/
+.vercel/
 
-# env & secrets — NEVER commit these
+# SECRETS - never commit (use .env.example as the template)
 .env
 .env.*
 !.env.example
-*.pem
-*firebase*adminsdk*.json
-serviceAccount*.json
 
-# local data (used when Firebase is off)
+# local database + uploads (customer data, NID photos, images)
 .data/
-.data/**
-
-# logs & debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+.firebase/
+firebase-debug.log*
+serviceAccount*.json
+*-firebase-adminsdk-*.json
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
-*.swp
-*.swo
-
-# test / coverage
-coverage/
-.nyc_output/
-
-# misc
-*.log
-.tmp/
-.cache/
+npm-debug.log*

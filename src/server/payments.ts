@@ -17,7 +17,11 @@ export interface GatewayAdapter {
   /** create a payment session and return the hosted page URL to send the customer to */
   init(order: Order, origin: string): Promise<{ url: string }>;
   /** handle the gateway's redirect/IPN request; say which order it is and whether it was paid */
-  callback(req: Request): Promise<{ orderNo: string; paid: boolean; ref?: string }>;
+  /**
+   * A REAL adapter must verify the gateway's signature / call the gateway's validation API server-to-server, and return the amount
+   * and currency the gateway actually charged. Never derive `paid` from a browser redirect or a client-supplied parameter.
+   */
+  callback(req: Request): Promise<{ orderNo: string; paid: boolean; ref?: string; amount?: number; currency?: string }>;
 }
 
 const adapters: GatewayAdapter[] = [

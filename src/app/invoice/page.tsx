@@ -15,10 +15,10 @@ export const metadata: Metadata = { title: "Invoice", robots: { index: false, fo
 export default async function CustomerInvoice({ searchParams }: { searchParams: Promise<{ no?: string; phone?: string }> }) {
   const sp = await searchParams;
   const no = (sp.no ?? "").trim().toUpperCase(), phone = normPhone((sp.phone ?? "").trim());
-  const h = await headers(); const ip = h.get("x-forwarded-for")?.split(",")[0].trim() || h.get("x-real-ip") || "local";
+  const h = await headers(); const ip = h.get("x-nf-client-connection-ip") || h.get("x-real-ip") || h.get("x-forwarded-for")?.split(",")[0].trim() || "local";
   let order: Order | undefined, limited = false;
   try { rateLimit(`invoice:${ip}`, 30, 10 * 60_000); } catch { limited = true; }
-  if (!limited && no && phone) order = (await db.list<Order>("orders")).find((x) => x.orderNo === no && x.phone === phone);
+  if (!limited && no && phone) order = (await db.find<Order>("orders", "orderNo", no)).find((x) => x.phone === phone);
   const settings = await getSettings();
   if (!order) return (
     <div className="mx-auto max-w-md px-4 py-20 text-center">
@@ -28,7 +28,8 @@ export default async function CustomerInvoice({ searchParams }: { searchParams: 
       <Link href="/track" className="btn-primary mt-5 inline-flex">Track order</Link>
     </div>
   );
-  const { passHash, ...safe } = order as Order & { passHash?: string }; void passHash;
+  const { passHash, ...rest } = order as Order & { passHash?: string }; void passHash;
+  const safe: Order = { ...rest, items: rest.items.map(({ cost, ...i }) => i) }; // purchase cost is not for customers
   return (
     <div style={themeVars(settings) as React.CSSProperties} className="min-h-screen bg-gray-100">
       <PrintBar back={`/track?no=${encodeURIComponent(order.orderNo)}&phone=${encodeURIComponent(order.phone)}`} paper={settings.invoice?.paper} />

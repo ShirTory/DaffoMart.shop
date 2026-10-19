@@ -1,11 +1,11 @@
-import { requireAdmin } from "@/server/auth";
+import { requireSession } from "@/server/auth";
 import { handle, ok } from "@/server/http";
 export const dynamic = "force-dynamic";
 
 const has = (k: string) => Boolean(process.env[k]?.trim());
 /** Admin only (sign in first): shows which environment variables are set, as true/false. Values are never shown. */
 export const GET = handle(async () => {
-  await requireAdmin();
+  await requireSession();
   return ok({
     ADMIN_EMAIL: has("ADMIN_EMAIL"),
     ADMIN_PASSWORD: has("ADMIN_PASSWORD"),

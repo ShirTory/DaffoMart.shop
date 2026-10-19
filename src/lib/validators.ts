@@ -1,6 +1,7 @@
 import { z } from "zod";
+import { normPhone } from "./format";
 
-const url = z.string().max(1000).refine((v) => v === "" || v.startsWith("/") || /^https?:\/\//.test(v), "Must be a valid URL or path");
+const url = z.string().max(1000).refine((v) => v === "" || (v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\")) || /^https?:\/\//.test(v), "Must be a valid URL or path");
 const colorRe = /^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})?$/;
 const color = z.string().trim().max(9).regex(colorRe, "Use a colour like #1E3A8A").optional();
 const pick = (...v: [string, ...string[]]) => z.enum(v).optional();
@@ -9,6 +10,8 @@ const optionalDate = z.string().optional().transform((v) => (v ? v : undefined))
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(120),
   slug: z.string().trim().max(140).optional(),
+  /** Unique SKU — required when active/published. Letters, numbers, - and _ only. */
+  sku: z.string().trim().max(64).regex(/^[A-Z0-9_-]*$/i, "SKU: letters, numbers, - and _ only").optional().transform((v) => (v ? v.toUpperCase() : undefined)),
   description: z.string().trim().max(5000).default(""),
   price: z.coerce.number().min(0, "Price must be 0 or more"),
   oldPrice: z.coerce.number().min(0).optional().transform((v) => (v ? v : undefined)),
@@ -24,6 +27,10 @@ export const productSchema = z.object({
   rating: z.coerce.number().min(0).max(5).default(0),
   featured: z.boolean().default(false),
   active: z.boolean().default(true),
+}).superRefine((data, ctx) => {
+  if (data.active && !data.sku) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "SKU is required for published products", path: ["sku"] });
+  }
 });
 
 export const categorySchema = z.object({
@@ -146,6 +153,29 @@ export const settingsSchema = z.object({
   courierOutsideNote: z.string().trim().max(300).optional(),
   footerPromoImage: url.optional().or(z.literal("")).optional(),
   footerPromoLink: z.string().trim().max(400).optional(),
+
+
+  labelRules: z.object({
+    showBestSeller: z.boolean().default(true),
+    bestSellerMinSold: z.coerce.number().int().min(1).max(100000).default(5),
+    showNewArrival: z.boolean().default(true),
+    newArrivalDays: z.coerce.number().int().min(1).max(365).default(14),
+    showOffer: z.boolean().default(true),
+    showOutOfStock: z.boolean().default(true),
+  }).optional(),
+  customerNidEnabled: z.boolean().optional(),
+  homeSections: z.array(z.object({
+    id: z.enum(["hero","features","categories","best","daily","fresh","household","offers","sale","medicine","new","buyAgain"]),
+    visible: z.boolean(),
+  })).max(20).optional(),
+  homeDailyCatIds: z.array(z.string().min(1).max(40)).max(20).optional(),
+  homeFreshCatIds: z.array(z.string().min(1).max(40)).max(20).optional(),
+  homeHouseholdCatIds: z.array(z.string().min(1).max(40)).max(20).optional(),
+  homeDailyTitle: z.string().trim().max(80).optional(),
+  homeFreshTitle: z.string().trim().max(80).optional(),
+  homeHouseholdTitle: z.string().trim().max(80).optional(),
+  homeBestTitle: z.string().trim().max(80).optional(),
+
 });
 /** Admin pages save only the fields they edit; the server merges them into the stored settings. */
 export const settingsPatchSchema = settingsSchema.partial();
@@ -180,16 +210,18 @@ export const inventorySchema = z.object({
 
 export const orderCreateSchema = z.object({
   name: z.string().trim().min(2, "Enter your full name").max(80),
-  phone: z.string().trim().regex(/^01[3-9]\d{8}$/, "Enter a valid mobile number (01XXXXXXXXX)"),
+  phone: z.string().transform(normPhone).pipe(z.string().regex(/^01[3-9]\d{8}$/, "Enter a valid mobile number (01XXXXXXXXX)")),
   address: z.string().trim().min(8, "Enter your full address").max(300),
   zone: z.string().trim().min(1, "Choose a delivery area").max(60),
   payment: z.string().trim().min(1).max(40).default("cod"),
   paymentRef: z.string().trim().max(40).optional(),
-  paymentFrom: z.string().trim().max(20).optional(),
+  paymentFrom: z.string().max(24).transform(normPhone).optional(),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
   note: z.string().trim().max(300).optional().default(""),
   couponCode: z.string().trim().toUpperCase().max(24).optional(),
+  /** client-generated random key for one checkout attempt; makes retries and double-taps idempotent */
+  idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/, "Invalid request key").optional(),
   items: z.array(z.object({ id: z.string().min(1), qty: z.coerce.number().int().min(1).max(100) })).min(1, "Your cart is empty").max(60),
 });
 

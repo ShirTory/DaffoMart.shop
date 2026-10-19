@@ -1,7 +1,7 @@
 import { handle, ok, ApiError } from "@/server/http";
 import { getEmployee, publicEmployee, requireEmployee } from "@/server/riderAuth";
 import { db } from "@/server/db";
-import { MAX_UPLOAD_BYTES, saveImage } from "@/server/storage";
+import { MAX_UPLOAD_BYTES, isOwnUpload, saveImage } from "@/server/storage";
 import type { Employee } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ export const PATCH = handle(async (req) => {
   const body = await req.json().catch(() => ({}));
   const patch: Partial<Employee> = {};
   if (typeof body.name === "string" && body.name.trim().length >= 2) patch.name = body.name.trim();
-  if (typeof body.image === "string") patch.image = body.image || undefined;
+  if (typeof body.image === "string") { if (body.image && !isOwnUpload(body.image)) throw new ApiError(400, "Invalid image"); patch.image = body.image || undefined; }
   const next = await db.update<Employee>("employees", e.id, patch);
   return ok(publicEmployee(next!));
 });

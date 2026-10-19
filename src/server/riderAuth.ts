@@ -13,6 +13,9 @@ export function verifyPassword(pw: string, stored?: string) {
   const a = Buffer.from(h, "hex"), b = scryptSync(pw, salt, 32); return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** True when the token was issued BEFORE the account's last password change (compared in whole seconds). */
+export const sessionRevoked = (iat: number | undefined, pwChangedAt?: string) => Boolean(pwChangedAt) && (iat ?? 0) < Math.floor(Date.parse(pwChangedAt!) / 1000);
+
 export async function createRiderSession(riderId: string) {
   const secret = getSecret(); if (!secret) throw new ApiError(503, "AUTH_SECRET is not configured.");
   const token = await new SignJWT({ role: "rider" }).setProtectedHeader({ alg: "HS256" }).setSubject(riderId).setIssuedAt().setExpirationTime(`${SESSION_SECONDS}s`).sign(secret);
@@ -28,7 +31,7 @@ export async function getRider(): Promise<Rider | null> {
     const { payload } = await jwtVerify(token, secret);
     if (payload.role !== "rider" || !payload.sub) return null;
     const r = await db.get<Rider>("riders", payload.sub);
-    return r && r.active && riderApproved(r) ? r : null;
+    return r && r.active && riderApproved(r) && !sessionRevoked(payload.iat, r.pwChangedAt) ? r : null;
   } catch { return null; }
 }
 export async function requireRider() { const r = await getRider(); if (!r) throw new ApiError(401, "Please sign in as a rider"); return r; }
@@ -49,7 +52,7 @@ export async function getEmployee(): Promise<Employee | null> {
     const { payload } = await jwtVerify(token, secret);
     if (payload.role !== "employee" || !payload.sub) return null;
     const e = await db.get<Employee>("employees", payload.sub);
-    return e && e.active && (!e.status || e.status === "approved") ? e : null;
+    return e && e.active && (!e.status || e.status === "approved") && !sessionRevoked(payload.iat, e.pwChangedAt) ? e : null;
   } catch { return null; }
 }
 export async function requireEmployee() { const e = await getEmployee(); if (!e) throw new ApiError(401, "Please sign in as an employee"); return e; }

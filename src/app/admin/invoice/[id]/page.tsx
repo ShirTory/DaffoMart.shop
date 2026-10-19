@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Invoice", robots: { index: false, follow: false } };
 
 export default async function AdminInvoice({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await getAdmin())) redirect("/admin/login");
+  const admin = await getAdmin();
+  if (!admin) redirect("/admin/login");
+  if (!admin.fullAccess) notFound(); // invoices contain customer details: full Admin access only
   const order = await db.get<Order>("orders", (await params).id); if (!order) notFound();
   const settings = await getSettings();
   return (

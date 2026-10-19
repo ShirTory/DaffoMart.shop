@@ -5,6 +5,7 @@ import { useCart } from "@/lib/store";
 import { useCartSync, useCoupon } from "@/lib/hooks";
 import { taka } from "@/lib/format";
 import { useT } from "@/components/store/TextsProvider";
+import CartNotice from "@/components/store/CartNotice";
 
 export default function CartPage() {
   const { items, setQty, remove } = useCart(); const t = useT();
@@ -16,10 +17,14 @@ export default function CartPage() {
   if (!mounted) return <div className="h-40 animate-pulse rounded-2xl bg-gray-200" />;
 
   if (!items.length) return (
+    <div>
+      <CartNotice />
     <div className="rounded-2xl border bg-white p-12 text-center shadow-card"><p className="text-5xl">🛒</p><h1 className="mt-3 text-xl font-bold">Your cart is empty</h1><p className="mt-1 text-sm text-gray-500">Looks like you haven&apos;t added anything yet.</p><Link href="/products" className="btn-primary mt-5">Start shopping</Link></div>
+    </div>
   );
   return (
     <div>
+      <CartNotice />
       <h1 className="mb-5 text-2xl font-bold tracking-tight">{t("cart.title")} <span className="text-base font-normal text-gray-500">({items.length} item{items.length > 1 ? "s" : ""})</span></h1>
       <div className="grid gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-3">

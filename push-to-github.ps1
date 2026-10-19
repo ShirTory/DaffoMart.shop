@@ -25,7 +25,12 @@ if ($Repo -ne "") {
 # Safety: never commit secrets
 foreach ($f in @(".env", ".env.local")) { if (git ls-files --error-unmatch $f 2>$null) { git rm --cached $f | Out-Null; Write-Host "Removed $f from git tracking." -ForegroundColor Yellow } }
 
+# Safety: refuse to push without a .gitignore (it keeps .env.local, node_modules and .data/ out of GitHub)
+if (-not (Test-Path ".gitignore")) { Write-Host ".gitignore is missing - refusing to push." -ForegroundColor Red; exit 1 }
+
 git add -A
+# Safety net: even if a secret slipped past .gitignore, unstage it
+foreach ($f in @(".env", ".env.local", ".env.production")) { git reset -q HEAD -- $f 2>$null }
 if (-not (git status --porcelain)) { Write-Host "Nothing new to commit." } else { git commit -m $Message | Out-Null; Write-Host "Committed." }
 
 git push -u origin $Branch

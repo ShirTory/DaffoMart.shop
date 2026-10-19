@@ -5,6 +5,9 @@ import sharp from "sharp";
 import { db, dataDir, firebaseAdmin, firebaseConfigured } from "./db";
 import { ApiError } from "./http";
 
+/** True only for images this site itself stored (local/DB upload route or our Firebase Storage). */
+export const isOwnUpload = (u: string) => u.startsWith("/api/uploads/") || /^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\//.test(u);
+
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // serverless hosts (Netlify/Vercel) reject request bodies of ~4.5-6 MB
 const ALLOWED = new Set(["jpeg", "png", "webp", "gif", "avif"]);
 const WIDTH: Record<string, number> = { product: 1200, banner: 2400, category: 600, offer: 1200, general: 1600 };

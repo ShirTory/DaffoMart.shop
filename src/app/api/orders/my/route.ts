@@ -9,8 +9,7 @@ export const GET = handle(async (req) => {
   rateLimit(`myorders:${clientIp(req)}`, 15, 10 * 60_000);
   const phone = normPhone((new URL(req.url).searchParams.get("phone") ?? "").trim());
   if (!/^01[3-9]\d{8}$/.test(phone)) throw new ApiError(400, "Enter a valid mobile number (01XXXXXXXXX)");
-  const list = (await db.list<Order>("orders"))
-    .filter((o) => o.phone === phone)
+  const list = (await db.find<Order>("orders", "phone", phone))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 20)
     .map((o) => ({

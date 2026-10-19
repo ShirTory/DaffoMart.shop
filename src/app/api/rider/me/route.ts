@@ -1,7 +1,7 @@
 import { handle, ok, ApiError } from "@/server/http";
 import { publicRider, requireRider } from "@/server/riderAuth";
 import { db } from "@/server/db";
-import { MAX_UPLOAD_BYTES, saveImage } from "@/server/storage";
+import { MAX_UPLOAD_BYTES, isOwnUpload, saveImage } from "@/server/storage";
 import type { Rider } from "@/lib/types";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -32,7 +32,7 @@ export const PATCH = handle(async (req) => {
   const patch: Partial<Rider> = {};
   if (typeof body.vehicle === "string") patch.vehicle = body.vehicle.trim().slice(0, 40);
   if (typeof body.area === "string") patch.area = body.area.trim().slice(0, 80);
-  if (typeof body.image === "string") patch.image = body.image || undefined;
+  if (typeof body.image === "string") { if (body.image && !isOwnUpload(body.image)) throw new ApiError(400, "Invalid image"); patch.image = body.image || undefined; }
   const next = await db.update<Rider>("riders", r.id, patch);
   return ok(publicRider(next!));
 });

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/server/db";
 import { gatewayInfo } from "@/server/payments";
-import { taka } from "@/lib/format";
+import { normPhone, taka } from "@/lib/format";
 import type { Order } from "@/lib/types";
 export const metadata: Metadata = { title: "Test payment", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function TestPayPage({ searchParams }: { searchParams: Promise<{ no?: string; phone?: string }> }) {
   if (!gatewayInfo().test) notFound();
   const { no = "", phone = "" } = await searchParams;
-  const o = (await db.list<Order>("orders")).find((x) => x.orderNo === no.toUpperCase() && x.phone === phone && x.payment === "online");
+  const o = (await db.find<Order>("orders", "orderNo", no.toUpperCase())).find((x) => x.phone === normPhone(phone) && x.payment === "online");
   if (!o) notFound();
   const q = encodeURIComponent(o.orderNo);
   return (

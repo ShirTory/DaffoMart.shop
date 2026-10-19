@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { getAdmin, requireAdmin } from "@/server/auth";
+import { getFullAdmin, requireAdmin } from "@/server/auth";
 import { handle, ok, readJson } from "@/server/http";
 import { newId } from "@/server/db";
 import { productCfg } from "@/server/resources";
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 /** GET /api/products?ids=a,b&q=&cat=&sort=price_asc|price_desc|popular|newest&max=&min=&featured=1&sale=1&limit=&page= */
 export const GET = handle(async (req) => {
-  const u = new URL(req.url).searchParams; const admin = await getAdmin();
+  const u = new URL(req.url).searchParams; const admin = await getFullAdmin();
   let list = admin ? await db.list<Product>("products") : [...(await getActiveProducts())]; // public visitors get the cached list
   const ids = (u.get("ids") ?? "").split(",").filter(Boolean).slice(0, 100);
   if (ids.length) list = list.filter((p) => ids.includes(p.id));
@@ -35,6 +35,7 @@ export const GET = handle(async (req) => {
 export const POST = handle(async (req) => {
   await requireAdmin();
   const data = productCfg.schema.parse(await readJson(req));
-  const rec = { ...(await productCfg.prepare(data, null)), id: newId() } as Product;
+  const id = newId();
+  const rec = { ...(await productCfg.prepare(data, null, id)), id } as Product; // id first: the atomic SKU reservation needs it
   return ok(await db.put("products", rec), 201);
 });

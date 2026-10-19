@@ -7,7 +7,8 @@ import type { GatewayAdapter } from "../payments";
  */
 export const testGateway: GatewayAdapter = {
   name: "Test gateway (sandbox)",
-  isConfigured: () => process.env.PAYMENT_TEST_MODE === "true",
+  // Fail closed: even if PAYMENT_TEST_MODE=true is left on, production ignores it unless ALLOW_PAYMENT_TEST_IN_PRODUCTION=true is ALSO set on purpose.
+  isConfigured: () => process.env.PAYMENT_TEST_MODE === "true" && (process.env.NODE_ENV !== "production" || process.env.ALLOW_PAYMENT_TEST_IN_PRODUCTION === "true"),
   async init(order, origin) { return { url: `${origin}/pay/test?no=${encodeURIComponent(order.orderNo)}&phone=${encodeURIComponent(order.phone)}` }; },
   async callback(req) {
     const u = new URL(req.url); const orderNo = (u.searchParams.get("no") ?? "").toUpperCase();

@@ -19,8 +19,9 @@ export const GET = handle(async (req) => {
 
 /** Public checkout. Prices, stock, delivery and coupon are all re-computed on the server. */
 export const POST = handle(async (req) => {
-  rateLimit(`order:${clientIp(req)}`, 10, 10 * 60_000);
+  rateLimit(`order:${clientIp(req)}`, 40, 10 * 60_000); // loose: a campus / hostel Wi-Fi shares one IP
   const input = orderCreateSchema.parse(await readJson(req));
+  rateLimit(`order-phone:${input.phone}`, 5, 10 * 60_000); // strict per customer
   const o = await createOrder(input);
   return ok({ orderNo: o.orderNo, total: o.total, id: o.id }, 201);
 });

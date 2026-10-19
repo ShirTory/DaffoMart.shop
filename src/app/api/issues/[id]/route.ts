@@ -1,5 +1,5 @@
 import { db } from "@/server/db";
-import { ApiError, handle, ok } from "@/server/http";
+import { ApiError, handle, ok, readJson } from "@/server/http";
 import { requireAdmin } from "@/server/auth";
 import { issuePatchSchema } from "@/lib/validators";
 import type { OrderIssue } from "@/lib/types";
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const PATCH = handle(async (req, ctx) => {
   await requireAdmin();
   const { id } = await ctx.params;
-  const body = issuePatchSchema.parse(await req.json());
+  const body = issuePatchSchema.parse(await readJson(req));
   const cur = await db.get<OrderIssue>("issues", id);
   if (!cur) throw new ApiError(404, "Issue not found");
   const next: OrderIssue = {

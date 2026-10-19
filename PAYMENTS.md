@@ -22,3 +22,8 @@ Customers who start an online payment but do not finish can press **Pay now** on
 Set `PAYMENT_TEST_MODE=true` (in `.env.local` or the host's environment variables) and restart. Checkout then sends the customer to a fake payment page
 (`/pay/test`) with *Simulate successful / failed payment* buttons, and the order's payment status updates exactly like a real gateway would.
 **No money moves and anyone can "pay" for free — never leave this on for real customers.** Remove the variable when you connect a real gateway.
+
+## Production behaviour (fail-closed)
+- `PAYMENT_TEST_MODE=true` is **ignored when `NODE_ENV=production`**. The sandbox gateway only works in production if `ALLOW_PAYMENT_TEST_IN_PRODUCTION=true` is also set (never do this on a live store).
+- No real gateway adapter is included, so **online payment stays disabled in production**. Cash on delivery and manually verified bKash/Nagad keep working.
+- A real adapter must verify the gateway's signature or call the gateway's validation API server-to-server and return `amount` and `currency`. The callback marks an order paid only when the amount matches, the currency is BDT, the order is not cancelled/returned, and the transaction reference is not used by another live order. Replays are ignored.
