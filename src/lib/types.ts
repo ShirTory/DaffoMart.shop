@@ -25,6 +25,12 @@ export interface Product {
 export interface Banner {
   id: string; title: string; subtitle: string; image: string; mobileImage?: string;
   ctaLabel: string; ctaHref: string; active: boolean; sortOrder: number; createdAt: string;
+  /** Optional per-slide look (Admin → Cover Images). Empty = sensible defaults. */
+  alt?: string; fit?: "cover" | "contain"; bg?: string;
+  overlay?: "auto" | "none" | "dark" | "light"; textColor?: string; align?: "left" | "center" | "right";
+  ctaBg?: string; ctaColor?: string; newTab?: boolean;
+  /** Show only between these dates (ISO). */
+  startsAt?: string; endsAt?: string;
 }
 
 export type DiscountType = "percent" | "flat";
@@ -82,7 +88,15 @@ export interface DealBadgeSettings {
   kinds: Record<DealKindId, DealKindSettings>;
 }
 /** Built-in animated grocery banner on the home page. */
-export interface HeroBannerSettings { show: boolean; ctaLabel: string; ctaHref: string; showBrowse: boolean; emojis: string }
+export interface HeroBannerSettings {
+  show: boolean; ctaLabel: string; ctaHref: string; showBrowse: boolean; emojis: string;
+  /** look of the built-in banner */
+  bgFrom: string; bgTo: string; textColor: string; ctaBg: string; ctaColor: string;
+  bgImage: string; overlay: number; height: "sm" | "md" | "lg"; align: "left" | "center";
+  showEyebrow: boolean; showShapes: boolean;
+  /** slider behaviour */
+  transition: "slide" | "fade"; showArrows: boolean; showDots: boolean; rounded: boolean;
+}
 
 /** accountant: Finance & Accounts only (no products, orders, settings, NID or staff data) */
 export type AdminRole = "owner" | "it_support" | "accountant";
@@ -131,6 +145,18 @@ export interface CustomerProfile {
 export interface StoreSettings {
   storeName: string; tagline: string; phone: string; email: string; address: string;
   announcement: string; facebook: string; whatsapp: string;
+  /** announcement bar look (Admin → Appearance) */
+  announcementIcon?: string; announcementLink?: string; announcementBg?: string; announcementColor?: string;
+  announcementStyle?: "static" | "marquee"; announcementSize?: "sm" | "md" | "lg"; announcementDismissible?: boolean; announcementCta?: string;
+  /** header look (Admin → Appearance) */
+  headerTheme?: "light" | "brand"; headerBg?: string; headerText?: string; headerSticky?: "bar" | "all" | "none";
+  headerShowCategories?: boolean; headerShowOrders?: boolean; headerShowTrack?: boolean; headerShowContact?: boolean; headerSearchStyle?: "pill" | "box";
+  headerCartStyle?: "accent" | "primary" | "outline"; headerMedicineStyle?: "soft" | "solid" | "plain";
+  /** product card look (Admin → Appearance) */
+  cardImageRatio?: "square" | "wide" | "tall"; cardStyle?: "flat" | "soft" | "outlined"; cardRadius?: "md" | "lg" | "xl";
+  cardShowUnit?: boolean; cardShowQtyStepper?: boolean; cardPriceColor?: string; cardGap?: "sm" | "md" | "lg";
+  /** page background + width */
+  pageBg?: string; pageWidth?: "normal" | "wide";
   /** legacy defaults, used only to create the first delivery zones */
   deliveryInside: number; deliveryOutside: number; freeDeliveryOver: number;
   /** Flat service / packaging charge applied at checkout (0 = off) */

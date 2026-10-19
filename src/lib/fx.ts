@@ -16,7 +16,11 @@ export const DEFAULT_DEALS: DealBadgeSettings = {
     exclusive: { on: true, label: "Exclusive Deal", color: "" },
   },
 };
-export const DEFAULT_HERO: HeroBannerSettings = { show: true, ctaLabel: "Shop Deals", ctaHref: "/products?sale=1", showBrowse: true, emojis: "🥕 🍎 🥛 🥬 🥖" };
+export const DEFAULT_HERO: HeroBannerSettings = {
+  show: true, ctaLabel: "Shop Deals", ctaHref: "/products?sale=1", showBrowse: true, emojis: "🥕 🍎 🥛 🥬 🥖",
+  bgFrom: "", bgTo: "", textColor: "", ctaBg: "", ctaColor: "", bgImage: "", overlay: 45, height: "md", align: "left",
+  showEyebrow: true, showShapes: true, transition: "slide", showArrows: true, showDots: true, rounded: true,
+};
 
 /** Stored settings are partial: fill every gap from the defaults so the storefront and admin always see a full object. */
 export const resolveFx = (s?: StoreSettings["fx"]): FxSettings => ({ ...DEFAULT_FX, ...(s || {}) });
@@ -30,3 +34,10 @@ export function resolveDeals(s?: StoreSettings["dealBadges"]): DealBadgeSettings
 export const parseEmojis = (v: string) => (v || "").split(/[\s,]+/).filter(Boolean).slice(0, 5);
 /** Seconds -> clamp, speed word -> duration multiplier (bigger = slower) */
 export const SPEED_MULT: Record<FxSettings["speed"], number> = { slow: 1.6, normal: 1, fast: 0.65 };
+
+/** Home banner height: wide on desktop, always capped on phones so it never pushes products off the first screen. Shared by the built-in banner and cover slides. */
+export const HERO_HEIGHT: Record<HeroBannerSettings["height"], string> = {
+  sm: "aspect-[21/9] max-h-[120px] sm:aspect-[16/4] sm:max-h-none",
+  md: "aspect-[21/9] max-h-[140px] sm:aspect-[16/5] sm:max-h-none",
+  lg: "aspect-[16/9] max-h-[190px] sm:aspect-[16/6] sm:max-h-none",
+};

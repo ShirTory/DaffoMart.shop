@@ -5,6 +5,8 @@ import { ErrorBox, Field, Icon, ImageUpload, PageHeader, PageLoader, Spinner, To
 import type { DealBadgeSettings, DealKindId, Feature, FxSettings, HeroBannerSettings, JobPosition, StoreSettings } from "@/lib/types";
 import { DEAL_KIND_IDS, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { FEATURE_ICON_KEYS } from "@/components/store/FeatureIcon";
+import GroceryBanner from "@/components/store/GroceryBanner";
+import { parseEmojis } from "@/lib/fx";
 
 type HomeSec = { id: string; visible: boolean };
 const SECTION_LABELS: Record<string, string> = {
@@ -284,18 +286,55 @@ export default function ContentPage() {
         </div>
       </div>
 
-      <div className="card mt-6 space-y-4 p-5">
+      <div className="card mt-6 space-y-5 p-5">
         <div>
-          <h2 className="text-base font-bold text-gray-900">Animated home banner</h2>
-          <p className="text-sm text-gray-500">The built-in grocery banner (heading and text come from “Home page banner text” above). With cover images it is the first slide; with none it is the whole banner.</p>
+          <h2 className="text-base font-bold text-gray-900">Home banner</h2>
+          <p className="text-sm text-gray-500">The built-in banner (text comes from “Home page banner text” above). With cover images it is the first slide; with none it is the whole banner. To use your own photo, design or <b>animated GIF</b> as the banner, add it in <a className="font-semibold text-primary underline" href="/admin/covers">Cover Images</a>, or use it as this banner’s background below.</p>
         </div>
+
+        <div className="overflow-hidden rounded-xl border border-gray-200" aria-label="Live preview">
+          <GroceryBanner {...f.heroBanner} mode="slide" storeName="DaffoMart" title={f.heroTitle || "Groceries & medicine, delivered to your door."} subtitle={f.heroSubtitle || "Fresh food, daily needs and trusted medicine."} ctaLabel={f.heroBanner.ctaLabel} ctaHref="#" emojis={parseEmojis(f.heroBanner.emojis)} browseLabel={f.heroBanner.showBrowse ? (f.heroCta || "Shop now") : undefined} />
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
-          <Toggle checked={f.heroBanner.show} onChange={(v) => set("heroBanner", { ...f.heroBanner, show: v })} label="Show the grocery banner as first slide (when cover images exist)" />
-          <Toggle checked={f.heroBanner.showBrowse} onChange={(v) => set("heroBanner", { ...f.heroBanner, showBrowse: v })} label="Show the second “Browse” link (desktop)" />
+          <Toggle checked={f.heroBanner.show} onChange={(v) => set("heroBanner", { ...f.heroBanner, show: v })} label="Show this banner as the first slide (when cover images exist)" />
+          <Toggle checked={f.heroBanner.showBrowse} onChange={(v) => set("heroBanner", { ...f.heroBanner, showBrowse: v })} label="Show the second “Shop now” link (desktop)" />
+          <Toggle checked={f.heroBanner.showEyebrow} onChange={(v) => set("heroBanner", { ...f.heroBanner, showEyebrow: v })} label="Show the store name above the heading" />
+          <Toggle checked={f.heroBanner.showShapes} onChange={(v) => set("heroBanner", { ...f.heroBanner, showShapes: v })} label="Soft glow &amp; circle decoration" />
+          <Toggle checked={f.heroBanner.rounded} onChange={(v) => set("heroBanner", { ...f.heroBanner, rounded: v })} label="Rounded corners on desktop" />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Main button text"><input className="input" maxLength={30} value={f.heroBanner.ctaLabel} onChange={(e) => set("heroBanner", { ...f.heroBanner, ctaLabel: e.target.value })} /></Field>
           <Field label="Main button link" hint="e.g. /products?sale=1 or /medicine"><input className="input" value={f.heroBanner.ctaHref} onChange={(e) => set("heroBanner", { ...f.heroBanner, ctaHref: e.target.value })} /></Field>
+          <Field label="Banner height"><select className="input" value={f.heroBanner.height} onChange={(e) => set("heroBanner", { ...f.heroBanner, height: e.target.value as HeroBannerSettings["height"] })}><option value="sm">Compact</option><option value="md">Standard</option><option value="lg">Tall</option></select></Field>
+          <Field label="Text alignment" hint="Centre hides the floating items"><select className="input" value={f.heroBanner.align} onChange={(e) => set("heroBanner", { ...f.heroBanner, align: e.target.value as HeroBannerSettings["align"] })}><option value="left">Left</option><option value="center">Centre</option></select></Field>
         </div>
-        <Field label="Floating emoji (up to 5, separated by spaces)" hint="Empty = no floating items. Example: 🥕 🍎 🥛 🥬 🥖"><input className="input" maxLength={60} value={f.heroBanner.emojis} onChange={(e) => set("heroBanner", { ...f.heroBanner, emojis: e.target.value })} /></Field>
+
+        <div className="grid gap-4 border-t pt-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ColorField label="Gradient start colour" value={f.heroBanner.bgFrom} onChange={(v) => set("heroBanner", { ...f.heroBanner, bgFrom: v })} fallback="#0D1A3E" />
+          <ColorField label="Gradient end colour" value={f.heroBanner.bgTo} onChange={(v) => set("heroBanner", { ...f.heroBanner, bgTo: v })} fallback="#1E3A8A" />
+          <ColorField label="Text colour" value={f.heroBanner.textColor} onChange={(v) => set("heroBanner", { ...f.heroBanner, textColor: v })} fallback="#FFFFFF" />
+          <ColorField label="Button colour" value={f.heroBanner.ctaBg} onChange={(v) => set("heroBanner", { ...f.heroBanner, ctaBg: v })} fallback="#F7941D" />
+          <ColorField label="Button text colour" value={f.heroBanner.ctaColor} onChange={(v) => set("heroBanner", { ...f.heroBanner, ctaColor: v })} fallback="#FFFFFF" />
+        </div>
+        <p className="-mt-2 text-xs text-gray-500">Colours left empty use your brand colours from Appearance.</p>
+
+        <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+          <ImageUpload kind="banner" allowUrl label="Background image or GIF (optional)" aspect="aspect-[16/5]" value={f.heroBanner.bgImage || undefined} onChange={(v) => set("heroBanner", { ...f.heroBanner, bgImage: v ?? "" })} hint="Replaces the gradient. GIF and animated WebP keep playing." />
+          <div className="space-y-4">
+            <Field label={`Darken background image: ${f.heroBanner.overlay}%`} hint="Keeps the heading readable on bright images"><input type="range" min={0} max={90} step={5} className="w-full" value={f.heroBanner.overlay} onChange={(e) => set("heroBanner", { ...f.heroBanner, overlay: Number(e.target.value) })} /></Field>
+            <Field label="Floating emoji (up to 5, separated by spaces)" hint="Empty = no floating items. Example: 🥕 🍎 🥛 🥬 🥖"><input className="input" maxLength={60} value={f.heroBanner.emojis} onChange={(e) => set("heroBanner", { ...f.heroBanner, emojis: e.target.value })} /></Field>
+          </div>
+        </div>
+
+        <div className="grid gap-3 border-t pt-4 sm:grid-cols-2">
+          <Field label="Slide change effect"><select className="input" value={f.heroBanner.transition} onChange={(e) => set("heroBanner", { ...f.heroBanner, transition: e.target.value as HeroBannerSettings["transition"] })}><option value="slide">Slide sideways</option><option value="fade">Fade</option></select></Field>
+          <div className="flex flex-col justify-end gap-3 pb-1">
+            <Toggle checked={f.heroBanner.showArrows} onChange={(v) => set("heroBanner", { ...f.heroBanner, showArrows: v })} label="Show previous / next arrows (desktop)" />
+            <Toggle checked={f.heroBanner.showDots} onChange={(v) => set("heroBanner", { ...f.heroBanner, showDots: v })} label="Show dots under the banner" />
+          </div>
+        </div>
       </div>
 
       <div className="card mt-6 space-y-4 p-5">

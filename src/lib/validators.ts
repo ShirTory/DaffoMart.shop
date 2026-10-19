@@ -59,6 +59,11 @@ export const bannerSchema = z.object({
   ctaHref: z.string().trim().max(300).default("/products"),
   active: z.boolean().default(true),
   sortOrder: z.coerce.number().int().default(0),
+  alt: z.string().trim().max(160).optional().transform((v) => v || undefined),
+  fit: pick("cover", "contain"), bg: color,
+  overlay: pick("auto", "none", "dark", "light"), textColor: color, align: pick("left", "center", "right"),
+  ctaBg: color, ctaColor: color, newTab: z.boolean().optional(),
+  startsAt: optionalDate, endsAt: optionalDate,
 });
 
 export const offerSchema = z.object({
@@ -86,6 +91,15 @@ export const settingsSchema = z.object({
   hours: z.string().trim().max(160).default(""),
   mapUrl: z.string().trim().max(600).default(""),
   announcement: z.string().trim().max(200).default(""),
+  announcementIcon: z.string().trim().max(8).optional(), announcementLink: z.string().trim().max(400).optional(),
+  announcementBg: color, announcementColor: color, announcementStyle: pick("static", "marquee"), announcementSize: pick("sm", "md", "lg"),
+  announcementDismissible: z.boolean().optional(), announcementCta: z.string().trim().max(30).optional(),
+  headerTheme: pick("light", "brand"), headerBg: color, headerText: color, headerSticky: pick("bar", "all", "none"),
+  headerShowCategories: z.boolean().optional(), headerShowOrders: z.boolean().optional(), headerShowTrack: z.boolean().optional(), headerShowContact: z.boolean().optional(),
+  headerSearchStyle: pick("pill", "box"), headerCartStyle: pick("accent", "primary", "outline"), headerMedicineStyle: pick("soft", "solid", "plain"),
+  cardImageRatio: pick("square", "wide", "tall"), cardStyle: pick("flat", "soft", "outlined"), cardRadius: pick("md", "lg", "xl"),
+  cardShowUnit: z.boolean().optional(), cardShowQtyStepper: z.boolean().optional(), cardPriceColor: color, cardGap: pick("sm", "md", "lg"),
+  pageBg: color, pageWidth: pick("normal", "wide"),
   minOrder: z.coerce.number().min(0).default(0),
   serviceCharge: z.coerce.number().min(0).max(100000).optional(),
   deliveryInside: z.coerce.number().min(0),
@@ -179,6 +193,9 @@ export const settingsSchema = z.object({
   }).partial().optional(),
   heroBanner: z.object({
     show: z.boolean(), ctaLabel: z.string().trim().max(30), ctaHref: url, showBrowse: z.boolean(), emojis: z.string().trim().max(60),
+    bgFrom: color, bgTo: color, textColor: color, ctaBg: color, ctaColor: color, bgImage: url, overlay: z.coerce.number().min(0).max(90),
+    height: z.enum(["sm", "md", "lg"]), align: z.enum(["left", "center"]), showEyebrow: z.boolean(), showShapes: z.boolean(),
+    transition: z.enum(["slide", "fade"]), showArrows: z.boolean(), showDots: z.boolean(), rounded: z.boolean(),
   }).partial().optional(),
   customerNidEnabled: z.boolean().optional(),
   homeSections: z.array(z.object({

@@ -116,7 +116,7 @@ export default function SettingsPage() {
             <h2 className="font-bold">Store information</h2>
             <Field label="Store name" error={errs.storeName}><input className="input" value={f.storeName} onChange={set("storeName")} /></Field>
             <Field label="Tagline" hint="Browser title & footer"><input className="input" value={f.tagline} onChange={set("tagline")} /></Field>
-            <Field label="Announcement bar" hint="Top bar — empty to hide"><input className="input" value={f.announcement} onChange={set("announcement")} /></Field>
+            <Field label="Announcement bar" hint="Top bar — empty to hide. Colours, icon, link and scrolling are in Appearance."><input className="input" value={f.announcement} onChange={set("announcement")} /></Field>
             <Field label="Minimum order (৳)" error={errs.minOrder}><input className="input" type="number" min="0" value={f.minOrder} onChange={set("minOrder")} /></Field>
             <Field label="Service charge (৳)" hint="Added to every order total. 0 = none" error={errs.serviceCharge}><input className="input" type="number" min="0" value={f.serviceCharge} onChange={set("serviceCharge")} /></Field>
           </section>

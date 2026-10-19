@@ -108,3 +108,21 @@ img { image-rendering: auto; }
 [data-fx-cat="off"] .cat-link:hover .cat-float, [data-fx-cat="off"] .cat-link:focus-visible .cat-float { transform: none !important; box-shadow: none !important; }
 [data-fx-shine="off"] .deal-badge::after { display: none; }
 [data-fx-float="off"] :is(.hero-float, .hero-blob) { animation: none !important; }
+
+/* ================= Storefront polish v3 ================= */
+body { background: rgb(var(--c-page, 246 247 251)); }
+.page-w { max-width: var(--page-max, 80rem); }
+
+/* Announcement bar: marquee for long messages */
+@keyframes ann-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ann-track { display: flex; width: max-content; animation: ann-marquee calc(22s * var(--fx-speed, 1)) linear infinite; }
+.ann-track:hover { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) { .ann-track { animation: none; } }
+
+/* Hero slider fade mode */
+.hero-fade > * { position: absolute; inset: 0; opacity: 0; transition: opacity .7s ease; pointer-events: none; }
+.hero-fade > [data-active="true"] { position: relative; opacity: 1; pointer-events: auto; }
+@media (prefers-reduced-motion: reduce) { .hero-fade > * { transition: none; } }
+
+/* Product card typography */
+.price-now { color: rgb(var(--c-price, 223 124 5)); }

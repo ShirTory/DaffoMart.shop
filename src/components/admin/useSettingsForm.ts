@@ -17,7 +17,7 @@ export function useSettingsForm(keys: (keyof StoreSettings)[]) {
     setBusy(true); setErrs({});
     try {
       const body: Record<string, unknown> = {};
-      for (const k of keys) { const v = f[k]; if (v !== undefined) body[k as string] = v; }
+      for (const k of keys) { const v = f[k]; if (v !== undefined) body[k as string] = v; else if (data && data[k] !== undefined) body[k as string] = null; } // null = cleared by the admin (Reset / Remove)
       await api("/api/settings", { method: "PUT", body }); toast(okMsg); return true;
     } catch (e: any) { if (e instanceof ApiClientError) setErrs(e.fields); toast(e.message, "err"); return false; } finally { setBusy(false); }
   };

@@ -146,11 +146,18 @@ export function useConfirm() {
 }
 
 /* ---------- Image upload (drag & drop, file picker, or URL) ---------- */
-export function ImageUpload({ value, onChange, kind, label = "Image", hint, aspect = "aspect-square", rounded = "rounded-xl" }: {
+export function ImageUpload({ value, onChange, kind, label = "Image", hint, aspect = "aspect-square", rounded = "rounded-xl", allowUrl = false, fit = "cover" }: {
   value?: string; onChange: (url: string | undefined) => void; kind: "product" | "banner" | "category" | "offer" | "general"; label?: string; hint?: string; aspect?: string; rounded?: string;
+  /** Also let the admin paste a link (handy for large GIFs hosted elsewhere, e.g. Cloudinary, Giphy, your own CDN). */
+  allowUrl?: boolean; fit?: "cover" | "contain";
 }) {
   const toast = useToast(); const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState(false); const [drag, setDrag] = useState(false);
+  const [busy, setBusy] = useState(false); const [drag, setDrag] = useState(false); const [link, setLink] = useState("");
+  const applyLink = () => {
+    const v = link.trim();
+    if (!/^https:\/\//i.test(v) && !v.startsWith("/")) return toast("Paste a full link that starts with https://", "err");
+    onChange(v); setLink(""); toast("Image link added");
+  };
   const pick = async (f?: File) => {
     if (!f) return;
     if (!f.type.startsWith("image/")) return toast("Please choose an image file", "err");
@@ -164,18 +171,24 @@ export function ImageUpload({ value, onChange, kind, label = "Image", hint, aspe
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); pick(e.dataTransfer.files?.[0]); }}>
         {value ? (
-          <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={value} alt="" className="h-full w-full object-cover" />
+          <>{/* eslint-disable-next-line @next/next/no-img-element */}<img src={value} alt="" className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`} />
             <div className="absolute inset-x-0 bottom-0 flex justify-end gap-2 bg-gradient-to-t from-black/60 to-transparent p-2">
               <button type="button" className="btn-sm btn bg-white text-gray-800 hover:bg-gray-100" onClick={() => input.current?.click()}>Replace</button>
               <button type="button" className="btn-sm btn bg-red-600 text-white hover:bg-red-700" onClick={() => onChange(undefined)}>Remove</button>
             </div></>
         ) : (
           <button type="button" onClick={() => input.current?.click()} className="flex h-full w-full flex-col items-center justify-center gap-1 p-3 text-center text-gray-500 hover:text-primary">
-            <Icon name="upload" className="h-7 w-7" /><span className="text-sm font-semibold">Click to upload</span><span className="text-xs">or drag &amp; drop · JPG, PNG, WebP (max 4 MB)</span>
+            <Icon name="upload" className="h-7 w-7" /><span className="text-sm font-semibold">Click to upload</span><span className="text-xs">or drag &amp; drop · JPG, PNG, WebP, GIF (max 4 MB)</span>
           </button>)}
         {busy && <div className="absolute inset-0 flex items-center justify-center bg-white/80 text-primary"><Spinner className="h-7 w-7" /></div>}
       </div>
       {hint && <p className="mt-1 text-xs text-gray-400">{hint}</p>}
+      {allowUrl && (
+        <div className="mt-2 flex gap-2">
+          <input className="input h-9 text-xs" value={link} placeholder="…or paste an image / GIF link (https://…)" onChange={(e) => setLink(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); applyLink(); } }} aria-label={`${label} link`} />
+          <button type="button" className="btn-outline btn-sm shrink-0" onClick={applyLink} disabled={!link.trim()}>Use link</button>
+        </div>
+      )}
       <input ref={input} type="file" accept="image/*" hidden onChange={(e) => pick(e.target.files?.[0])} />
     </div>
   );

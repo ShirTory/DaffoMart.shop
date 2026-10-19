@@ -20,15 +20,15 @@ export default async function Footer({ settings: s, categories }: { settings: St
   );
 
   return (
-    <footer className="mt-12 bg-secondary text-white">
+    <footer className="mt-6 bg-secondary text-white">
       {promo && (
-        <div className="mx-auto max-w-7xl px-4 pt-8">
+        <div className="mx-auto page-w w-full px-4 pt-8">
           <div className={`overflow-hidden rounded-2xl ${PROMO_H[s.footerPromoHeight || "md"] ?? PROMO_H.md}`} style={promoBg ? { background: promoBg } : { background: "rgba(255,255,255,0.06)" }}>
             {s.footerPromoLink ? <a href={s.footerPromoLink} className="block h-full" {...(/^https?:/.test(s.footerPromoLink) ? { target: "_blank", rel: "noopener noreferrer" } : {})}>{promoImg}</a> : promoImg}
           </div>
         </div>
       )}
-      <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto grid page-w w-full gap-8 px-4 py-10 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <div className="inline-block rounded-xl bg-white px-3 py-2">
             <Logo src={s.logo} name={s.storeName} className="h-9 w-auto" />

@@ -2,9 +2,14 @@
 import { ErrorBox, Field, ImageUpload, PageHeader, PageLoader, Spinner, Toggle } from "@/components/admin/ui";
 import { useSettingsForm } from "@/components/admin/useSettingsForm";
 import { BRAND, themeVars, validHex } from "@/lib/theme";
+import AnnouncementBar from "@/components/store/AnnouncementBar";
 import type { StoreSettings } from "@/lib/types";
 
-const KEYS: (keyof StoreSettings)[] = ["primaryColor", "accentColor", "secondaryColor", "buttonColor", "buttonTextColor", "buttonStyle", "buttonRadius", "buttonSize", "showBuyNow", "showWishlist", "showCardWhatsapp", "showCardDelivery",
+const KEYS: (keyof StoreSettings)[] = [
+  "announcement", "announcementIcon", "announcementLink", "announcementCta", "announcementBg", "announcementColor", "announcementStyle", "announcementSize", "announcementDismissible",
+  "headerTheme", "headerBg", "headerText", "headerSticky", "headerShowCategories", "headerShowOrders", "headerShowTrack", "headerShowContact", "headerSearchStyle", "headerCartStyle", "headerMedicineStyle",
+  "cardImageRatio", "cardStyle", "cardRadius", "cardShowUnit", "cardShowQtyStepper", "cardPriceColor", "pageBg", "pageWidth",
+  "primaryColor", "accentColor", "secondaryColor", "buttonColor", "buttonTextColor", "buttonStyle", "buttonRadius", "buttonSize", "showBuyNow", "showWishlist", "showCardWhatsapp", "showCardDelivery",
   "showSupportCall", "showSupportWa", "supportCallLabel", "supportWaLabel", "supportCallColor", "supportWaColor", "supportPosition", "supportWaMessage",
   "navAllImage", "navMedicineImage", "navOffersImage", "showCatSection", "catIconSize", "catIconShape", "catIconBg", "catIconFit", "catShowLabels", "catGap", "catLabelColor",
   "footerPromoImage", "footerPromoLink", "footerPromoShow", "footerPromoHeight", "footerPromoBg", "footerPromoAlt", "footerPromoFit", "footerShowPayments", "footerShowCategories",
@@ -41,6 +46,60 @@ export default function AppearancePage() {
       </PageHeader>
 
       <div className="grid gap-5 lg:grid-cols-2">
+        <Sec title="Announcement bar" desc="The strip above the header. It automatically uses a colour that stands out from the header, with readable text.">
+          <div style={vars} className="-mx-1 overflow-hidden rounded-xl border border-gray-200"><AnnouncementBar settings={{ ...f, announcement: f.announcement || "Your announcement shows here" }} /></div>
+          <Field label="Message" hint="Empty = the bar is hidden" error={errs.announcement}><input className="input" maxLength={200} value={f.announcement ?? ""} placeholder="Free delivery on orders over ৳500 · Cash on delivery available" onChange={(e) => set("announcement", e.target.value)} /></Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Icon (emoji)" hint="Empty = megaphone icon"><input className="input text-center text-lg" maxLength={8} value={f.announcementIcon ?? ""} placeholder="📢" onChange={(e) => set("announcementIcon", e.target.value || undefined)} /></Field>
+            <Sel label="Text size" value={f.announcementSize} onChange={(v) => set("announcementSize", v as never)} opts={[["md", "Medium"], ["sm", "Small"], ["lg", "Large"]]} />
+            <Field label="Link when clicked (optional)" error={errs.announcementLink}><input className="input" value={f.announcementLink ?? ""} placeholder="/products?sale=1" onChange={(e) => set("announcementLink", e.target.value || undefined)} /></Field>
+            <Field label="Small button text (optional)" hint="Needs a link, e.g. Shop now"><input className="input" maxLength={30} value={f.announcementCta ?? ""} onChange={(e) => set("announcementCta", e.target.value || undefined)} /></Field>
+            <Color label="Background colour" value={f.announcementBg} onChange={sv("announcementBg")} fallback="#0D1A3E" hint="Empty = automatic" />
+            <Color label="Text colour" value={f.announcementColor} onChange={sv("announcementColor")} fallback="#FFFFFF" hint="Empty = automatic (readable)" />
+            <Sel label="Style" value={f.announcementStyle} onChange={(v) => set("announcementStyle", v as never)} opts={[["static", "Centred text"], ["marquee", "Scrolling text (good for long messages)"]]} />
+          </div>
+          <Toggle checked={on("announcementDismissible", false)} onChange={tg("announcementDismissible", false)} label="Let visitors close the bar (it returns when you change the message)" />
+        </Sec>
+
+        <Sec title="Header" desc="The top bar with logo, search, medicine, wishlist and cart.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Sel label="Header style" value={f.headerTheme} onChange={(v) => set("headerTheme", v as never)} opts={[["light", "Light (white, clean)"], ["brand", "Brand (deep colour)"]]} hint="Light is the most readable and professional" />
+            <Sel label="Stays visible while scrolling" value={f.headerSticky} onChange={(v) => set("headerSticky", v as never)} opts={[["bar", "Top bar only (recommended)"], ["all", "Top bar and categories"], ["none", "Scrolls away"]]} />
+            <Color label="Custom background" value={f.headerBg} onChange={sv("headerBg")} fallback="#FFFFFF" hint="Empty = from the style above. Text colour adjusts itself." />
+            <Color label="Custom text colour" value={f.headerText} onChange={sv("headerText")} fallback="#1F2937" hint="Empty = automatic" />
+            <Sel label="Search box shape" value={f.headerSearchStyle} onChange={(v) => set("headerSearchStyle", v as never)} opts={[["pill", "Pill"], ["box", "Rounded box"]]} />
+            <Sel label="Cart button" value={f.headerCartStyle} onChange={(v) => set("headerCartStyle", v as never)} opts={[["accent", "Accent colour (orange)"], ["primary", "Primary colour (navy)"], ["outline", "Outline"]]} />
+            <Sel label="Medicine button" value={f.headerMedicineStyle} onChange={(v) => set("headerMedicineStyle", v as never)} opts={[["soft", "Soft green"], ["solid", "Solid green"], ["plain", "Text only"]]} />
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t pt-4">
+            <Toggle checked={on("headerShowCategories")} onChange={tg("headerShowCategories")} label="Show the category icon strip" />
+            <Toggle checked={on("headerShowOrders")} onChange={tg("headerShowOrders")} label="“My orders” link" />
+            <Toggle checked={on("headerShowTrack")} onChange={tg("headerShowTrack")} label="“Track order” link" />
+            <Toggle checked={on("headerShowContact", false)} onChange={tg("headerShowContact", false)} label="“Contact” link" />
+          </div>
+        </Sec>
+
+        <Sec title="Product cards" desc="How products look on the home page, product lists and medicine page.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Sel label="Photo shape" value={f.cardImageRatio} onChange={(v) => set("cardImageRatio", v as never)} opts={[["wide", "Wide (compact, recommended)"], ["square", "Square"], ["tall", "Tall (good for medicine boxes)"]]} />
+            <Sel label="Card style" value={f.cardStyle} onChange={(v) => set("cardStyle", v as never)} opts={[["soft", "Soft shadow"], ["outlined", "Thin outline"], ["flat", "Flat (no border)"]]} />
+            <Sel label="Corner roundness" value={f.cardRadius} onChange={(v) => set("cardRadius", v as never)} opts={[["xl", "Very round"], ["lg", "Round"], ["md", "Slightly round"]]} />
+            <Color label="Price colour" value={f.cardPriceColor} onChange={sv("cardPriceColor")} fallback="#B45309" hint="Empty = a deeper shade of the accent colour" />
+          </div>
+          <div className="flex flex-wrap gap-x-6 gap-y-3 border-t pt-4">
+            <Toggle checked={on("cardShowUnit")} onChange={tg("cardShowUnit")} label="Show “/ 1 kg” next to the price" />
+            <Toggle checked={on("cardShowQtyStepper")} onChange={tg("cardShowQtyStepper")} label="Show the − 1 + quantity picker" />
+          </div>
+          <p className="text-xs text-gray-500">“Buy now”, WhatsApp and delivery-note switches are in the <b>Buttons</b> section below.</p>
+        </Sec>
+
+        <Sec title="Page" desc="Background and width of the whole customer website.">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Color label="Page background" value={f.pageBg} onChange={sv("pageBg")} fallback="#F6F7FB" hint="Empty = soft grey-blue" />
+            <Sel label="Content width" value={f.pageWidth} onChange={(v) => set("pageWidth", v as never)} opts={[["normal", "Normal (1280 px)"], ["wide", "Wide (1440 px, for large screens)"]]} />
+          </div>
+        </Sec>
+
         <Sec title="Brand colours" desc="Used for links, prices, badges, header/footer and every primary button.">
           <div className="grid gap-4 sm:grid-cols-2">
             <Color label="Primary colour" value={f.primaryColor} onChange={sv("primaryColor")} fallback={BRAND.primary} />

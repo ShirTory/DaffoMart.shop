@@ -11,6 +11,13 @@ export function rgb(hex: string | undefined, fallback: string): [number, number,
   h = h.replace("#", ""); if (h.length === 3) h = h.split("").map((c) => c + c).join("");
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
+/** Relative luminance 0 (black) … 1 (white). */
+export function luminance([r, g, b]: number[]) {
+  const f = (v: number) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+/** Readable text colour (white or near-black) for any background hex — picks whichever has the higher WCAG contrast. */
+export const readableOn = (hex: string | undefined, fallback = "#ffffff") => (luminance(rgb(hex, fallback)) > 0.179 ? "#111827" : "#FFFFFF");
 const mix = (a: number[], b: number[], t: number) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 const tri = (c: number[]) => c.join(" ");
 export const validHex = (v?: string) => (v && HEX.test(v.trim()) && !LEGACY.has(v.trim().toLowerCase()) ? v.trim() : "");
@@ -32,5 +39,7 @@ export function themeVars(s: Partial<StoreSettings>): Record<string, string> {
     "--c-secondary": tri(sec),
     "--c-btn": tri(btn), "--c-btn-dark": tri(mix(btn, black, 0.18)), "--c-btn-text": tri(rgb(s.buttonTextColor, "#ffffff")),
     "--btn-radius": RADIUS[s.buttonRadius || "lg"] ?? RADIUS.lg, "--btn-py": py, "--btn-px": px, "--btn-fs": fs,
+    "--c-page": tri(rgb(s.pageBg, "#F6F7FB")), "--page-max": s.pageWidth === "wide" ? "90rem" : "80rem",
+    "--c-price": tri(validHex(s.cardPriceColor) ? rgb(s.cardPriceColor, BRAND.accent) : mix(a, black, 0.3)),
   };
 }

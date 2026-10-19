@@ -35,7 +35,7 @@ const DEFAULT_SECTIONS: HomeSectionConfig[] = [
 ];
 
 const Section = ({ title, children, href, emoji, viewAll = "View all →", prominent }: { title: string; children: React.ReactNode; href?: string; emoji?: string; viewAll?: string; prominent?: boolean }) => (
-  <section className="mt-4 sm:mt-6">
+  <section className="mt-6 sm:mt-8">
     <div className="mb-3 flex items-end justify-between gap-3">
       <h2 className={prominent ? "text-xl font-black tracking-tight text-gray-900 sm:text-2xl md:text-3xl" : "text-lg font-extrabold tracking-tight text-gray-900 sm:text-xl md:text-2xl"}>
         {emoji && <span className="mr-1.5">{emoji}</span>}
@@ -120,11 +120,15 @@ export default async function Home() {
   const show = (id: HomeSectionId) => sections.find((s) => s.id === id)?.visible !== false;
 
   const heroText = { storeName: settings.storeName, title: settings.heroTitle || settings.tagline, subtitle: settings.heroSubtitle || settings.tagline, browseLabel: settings.heroCta || "Shop now" };
-  const heroProps = { ctaLabel: hero.ctaLabel || "Shop Deals", ctaHref: hero.ctaHref || "/products?sale=1", emojis: parseEmojis(hero.emojis), browseLabel: hero.showBrowse ? heroText.browseLabel : undefined };
+  const heroProps = {
+    ctaLabel: hero.ctaLabel || "Shop Deals", ctaHref: hero.ctaHref || "/products?sale=1", emojis: parseEmojis(hero.emojis), browseLabel: hero.showBrowse ? heroText.browseLabel : undefined,
+    bgFrom: hero.bgFrom, bgTo: hero.bgTo, textColor: hero.textColor, ctaBg: hero.ctaBg, ctaColor: hero.ctaColor, bgImage: hero.bgImage, overlay: hero.overlay,
+    height: hero.height, align: hero.align, showEyebrow: hero.showEyebrow, showShapes: hero.showShapes, rounded: hero.rounded,
+  };
   const heroBlock = (
     <div className="anim-hero">
       {banners.length > 0
-        ? <HeroSlider banners={banners} lead={hero.show ? <GroceryBanner {...heroText} {...heroProps} mode="slide" /> : undefined} autoplay={fx.heroAutoplay} intervalMs={Math.round(fx.heroIntervalSec * 1000)} />
+        ? <HeroSlider banners={banners} lead={hero.show ? <GroceryBanner {...heroText} {...heroProps} mode="slide" /> : undefined} autoplay={fx.heroAutoplay} intervalMs={Math.round(fx.heroIntervalSec * 1000)} transition={hero.transition} showArrows={hero.showArrows} showDots={hero.showDots} rounded={hero.rounded} height={hero.height} />
         : <GroceryBanner {...heroText} {...heroProps} />}
     </div>
   );
