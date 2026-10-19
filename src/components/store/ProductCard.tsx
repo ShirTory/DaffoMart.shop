@@ -12,7 +12,7 @@ import { RxBadge } from "./MedicineBadge";
 import WishlistButton from "./WishlistButton";
 import { useFlags, useT } from "./TextsProvider";
 import DealBadge from "./DealBadge";
-import type { DealKind } from "@/lib/deals";
+import type { DealInfo } from "@/lib/deals";
 
 const optimizable = (src: string) => src.startsWith("/api/uploads/") || src.startsWith("https://firebasestorage.googleapis.com/");
 const CARD_SIZES = "(min-width: 1280px) 16vw, (min-width: 768px) 20vw, 42vw";
@@ -24,7 +24,7 @@ export function ProductImage({ p, className = "", emojiSize = "text-5xl", priori
   return <img src={p.image} alt={p.name} loading="lazy" decoding="async" className={`h-full w-full object-contain p-2 ${className}`} />;
 }
 
-export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: Product; whatsapp?: string; deal?: DealKind; dealDelay?: number }) {
+export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: Product; whatsapp?: string; deal?: DealInfo | null; dealDelay?: number }) {
   const add = useCart((s) => s.add);
   const mounted = useMounted();
   const inCart = useCart((s) => (mounted ? s.items.find((i) => i.id === p.id)?.qty ?? 0 : 0)); // 0 until mounted: matches the server render
@@ -64,8 +64,8 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
   return (
     <div className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm lift">
       <div className="absolute left-0 top-0 z-10 flex flex-col items-start gap-0.5">
-        {isBest && <span className="rounded-br-lg bg-primary px-2 py-0.5 text-[10px] font-bold text-white">Best Seller</span>}
-        {isNew && !isBest && <span className="rounded-br-lg bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white">New</span>}
+        {isBest && <span className="rounded-br-lg bg-primary px-2 py-0.5 text-[10px] font-bold text-white" style={lr.bestSellerColor ? { background: lr.bestSellerColor } : undefined}>{lr.bestSellerLabel || "Best Seller"}</span>}
+        {isNew && !isBest && <span className="rounded-br-lg bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white" style={lr.newColor ? { background: lr.newColor } : undefined}>{lr.newLabel || "New"}</span>}
         {isOffer && (
           <span className="m-1.5 rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">{off}% {t("card.off")}</span>
         )}
@@ -77,7 +77,7 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
       />
       <Link href={`/products/${p.slug}`} className="relative mx-auto flex aspect-square w-full max-w-[180px] items-center justify-center bg-white">
         <ProductImage p={p} className="transition duration-300 motion-safe:group-hover:scale-105" />
-        {deal && !out && <DealBadge kind={deal} delay={dealDelay} className="absolute bottom-1 left-1 z-[1]" />}
+        {deal && !out && <DealBadge deal={deal} delay={dealDelay} className="absolute bottom-1 left-1 z-[1]" />}
         {out && <span className="absolute inset-0 flex items-center justify-center bg-white/75 text-xs font-bold text-gray-600">{t("card.out")}</span>}
       </Link>
       <div className="flex flex-1 flex-col px-3 pb-3 pt-1">

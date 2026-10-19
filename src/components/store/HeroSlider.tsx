@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import type { Banner } from "@/lib/types";
 
 /** Admin banners as a slider. `lead` (e.g. the built-in grocery banner) is shown as the first slide. Autoplay is off for users who prefer reduced motion. */
-export default function HeroSlider({ banners, lead }: { banners: Banner[]; lead?: React.ReactNode }) {
+export default function HeroSlider({ banners, lead, autoplay = true, intervalMs = 5500 }: { banners: Banner[]; lead?: React.ReactNode; autoplay?: boolean; intervalMs?: number }) {
   const [i, setI] = useState(0); const [pause, setPause] = useState(false); const [reduce, setReduce] = useState(false);
   const off = lead ? 1 : 0; const n = banners.length + off;
   useEffect(() => {
@@ -12,7 +12,7 @@ export default function HeroSlider({ banners, lead }: { banners: Banner[]; lead?
     const on = () => setReduce(mq.matches); on();
     mq.addEventListener("change", on); return () => mq.removeEventListener("change", on);
   }, []);
-  useEffect(() => { if (n < 2 || pause || reduce) return; const t = setInterval(() => setI((x) => (x + 1) % n), 5500); return () => clearInterval(t); }, [n, pause, reduce]);
+  useEffect(() => { if (n < 2 || pause || reduce || !autoplay) return; const t = setInterval(() => setI((x) => (x + 1) % n), intervalMs); return () => clearInterval(t); }, [n, pause, reduce, autoplay, intervalMs]);
   return (
     <section className="group relative -mx-4 overflow-hidden bg-gray-100 shadow-card sm:mx-0 sm:rounded-2xl" onMouseEnter={() => setPause(true)} onMouseLeave={() => setPause(false)} onFocus={() => setPause(true)} onBlur={() => setPause(false)} aria-roledescription="carousel" aria-label="Featured offers">
       <div className="flex transition-transform duration-700 ease-out motion-reduce:transition-none" style={{ transform: `translateX(-${i * 100}%)` }}>

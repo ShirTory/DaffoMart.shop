@@ -2,7 +2,8 @@
 import { useEffect, useState } from "react";
 import { api, ApiClientError } from "@/lib/api";
 import { ErrorBox, Field, Icon, ImageUpload, PageHeader, PageLoader, Spinner, Toggle, useList, useToast } from "@/components/admin/ui";
-import type { Feature, JobPosition, StoreSettings } from "@/lib/types";
+import type { DealBadgeSettings, DealKindId, Feature, FxSettings, HeroBannerSettings, JobPosition, StoreSettings } from "@/lib/types";
+import { DEAL_KIND_IDS, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { FEATURE_ICON_KEYS } from "@/components/store/FeatureIcon";
 
 type HomeSec = { id: string; visible: boolean };
@@ -34,7 +35,27 @@ const DEFAULT_SECTIONS: HomeSec[] = [
   { id: "medicine", visible: true },
   { id: "new", visible: true },
 ];
-type F = Pick<StoreSettings, "logo" | "heroTitle" | "heroSubtitle" | "heroCta" | "features" | "showMedicine" | "medicineTitle" | "medicineSubtitle" | "medicineNotice" | "footerText" | "positions" | "joinTitle" | "joinIntro" | "homeDailyTitle" | "homeFreshTitle" | "homeHouseholdTitle" | "homeBestTitle" | "homeDailyCatIds" | "homeFreshCatIds" | "homeHouseholdCatIds" | "labelRules" | "customerNidEnabled"> & { homeSections: HomeSec[] };
+const KIND_HELP: Record<DealKindId, string> = {
+  mega: "Discount at or above the Mega % below",
+  limited: "Stock is low (at or below the Limited stock below)",
+  hot: "Discount at or above the Hot %",
+  value: "Discount at or above the Best Value %",
+  exclusive: "Any other discounted product (at or above the minimum discount)",
+};
+/** Colour picker + hex text + reset. Empty = built-in colour. */
+function ColorField({ label, value, onChange, fallback }: { label: string; value?: string; onChange: (v: string) => void; fallback: string }) {
+  return (
+    <Field label={label}>
+      <div className="flex items-center gap-2">
+        <input type="color" className="h-9 w-12 cursor-pointer rounded border bg-white p-0.5" value={/^#[0-9a-fA-F]{6}$/.test(value || "") ? value : fallback} onChange={(e) => onChange(e.target.value)} />
+        <input className="input font-mono text-xs" value={value || ""} placeholder="default" maxLength={7} onChange={(e) => onChange(e.target.value.trim())} />
+        {value ? <button type="button" className="btn-outline btn-sm" onClick={() => onChange("")}>Reset</button> : null}
+      </div>
+    </Field>
+  );
+}
+const KIND_FALLBACK: Record<DealKindId, string> = { mega: "#c026d3", limited: "#f59e0b", hot: "#dc2626", value: "#059669", exclusive: "#4f46e5" };
+type F = Pick<StoreSettings, "logo" | "heroTitle" | "heroSubtitle" | "heroCta" | "features" | "showMedicine" | "medicineTitle" | "medicineSubtitle" | "medicineNotice" | "footerText" | "positions" | "joinTitle" | "joinIntro" | "homeDailyTitle" | "homeFreshTitle" | "homeHouseholdTitle" | "homeBestTitle" | "homeDailyCatIds" | "homeFreshCatIds" | "homeHouseholdCatIds" | "labelRules" | "customerNidEnabled"> & { homeSections: HomeSec[]; fx: FxSettings; dealBadges: DealBadgeSettings; heroBanner: HeroBannerSettings };
 export default function ContentPage() {
   const toast = useToast(); const { data, loading, error, reload } = useList<StoreSettings>("/api/settings");
   const [f, setF] = useState<F | null>(null); const [busy, setBusy] = useState(false); const [errs, setErrs] = useState<Record<string, string>>({});
@@ -53,6 +74,7 @@ export default function ContentPage() {
     homeHouseholdCatIds: data.homeHouseholdCatIds || [],
     labelRules: data.labelRules || { showBestSeller: true, bestSellerMinSold: 5, showNewArrival: true, newArrivalDays: 14, showOffer: true, showOutOfStock: true },
     customerNidEnabled: data.customerNidEnabled === true,
+    fx: resolveFx(data.fx), dealBadges: resolveDeals(data.dealBadges), heroBanner: resolveHero(data.heroBanner),
   }); }, [data]);
   if (loading) return <PageLoader />; if (error || !f) return <ErrorBox msg={error || "Failed to load"} retry={reload} />;
   const set = <K extends keyof F>(k: K, v: F[K]) => setF({ ...f, [k]: v });
@@ -224,7 +246,78 @@ export default function ContentPage() {
           <Toggle checked={!!f.labelRules?.showOffer} onChange={(v) => set("labelRules", { ...f.labelRules!, showOffer: v })} label="Show Offer / discount badge" />
           <Toggle checked={!!f.labelRules?.showOutOfStock} onChange={(v) => set("labelRules", { ...f.labelRules!, showOutOfStock: v })} label="Show Out of Stock badge" />
         </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Best Seller wording" hint="Empty = “Best Seller”"><input className="input" maxLength={20} value={f.labelRules?.bestSellerLabel ?? ""} onChange={(e) => set("labelRules", { ...f.labelRules!, bestSellerLabel: e.target.value })} placeholder="Best Seller" /></Field>
+          <ColorField label="Best Seller colour" value={f.labelRules?.bestSellerColor} onChange={(v) => set("labelRules", { ...f.labelRules!, bestSellerColor: v })} fallback="#1e3a8a" />
+          <Field label="New wording" hint="Empty = “New”"><input className="input" maxLength={20} value={f.labelRules?.newLabel ?? ""} onChange={(e) => set("labelRules", { ...f.labelRules!, newLabel: e.target.value })} placeholder="New" /></Field>
+          <ColorField label="New colour" value={f.labelRules?.newColor} onChange={(v) => set("labelRules", { ...f.labelRules!, newColor: v })} fallback="#059669" />
+        </div>
         <Toggle checked={!!f.customerNidEnabled} onChange={(v) => set("customerNidEnabled", v)} label="Enable optional customer NID collection (privacy-sensitive — off by default)" />
+      </div>
+
+      <div className="card mt-6 space-y-4 p-5">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Super Deals badges</h2>
+          <p className="text-sm text-gray-500">Badges on discounted products (Hot deals section) and on offer cards. The first matching badge is used, in this order: Mega Savings → Limited Offer → Hot Deal → Best Value → Exclusive Deal. Turn a badge off and it is skipped.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Toggle checked={f.dealBadges.enabled} onChange={(v) => set("dealBadges", { ...f.dealBadges, enabled: v })} label="Show deal badges on products" />
+          <Toggle checked={f.dealBadges.onOffers} onChange={(v) => set("dealBadges", { ...f.dealBadges, onOffers: v })} label="Show deal badges on offer cards" />
+          <Field label="Minimum discount % for any badge" hint="Below this, no badge is shown"><input className="input" type="number" min={0} max={99} value={f.dealBadges.minDiscount} onChange={(e) => set("dealBadges", { ...f.dealBadges, minDiscount: Number(e.target.value) })} /></Field>
+          <Field label="Limited stock (units left)" hint="At or below this many in stock → Limited Offer"><input className="input" type="number" min={1} value={f.dealBadges.limitedStock} onChange={(e) => set("dealBadges", { ...f.dealBadges, limitedStock: Number(e.target.value) })} /></Field>
+          <Field label="Mega Savings from (% off)"><input className="input" type="number" min={1} max={99} value={f.dealBadges.megaPct} onChange={(e) => set("dealBadges", { ...f.dealBadges, megaPct: Number(e.target.value) })} /></Field>
+          <Field label="Hot Deal from (% off)"><input className="input" type="number" min={1} max={99} value={f.dealBadges.hotPct} onChange={(e) => set("dealBadges", { ...f.dealBadges, hotPct: Number(e.target.value) })} /></Field>
+          <Field label="Best Value from (% off)"><input className="input" type="number" min={1} max={99} value={f.dealBadges.valuePct} onChange={(e) => set("dealBadges", { ...f.dealBadges, valuePct: Number(e.target.value) })} /></Field>
+        </div>
+        <div className="space-y-3">
+          {DEAL_KIND_IDS.map((k) => {
+            const kd = f.dealBadges.kinds[k];
+            const patch = (p: Partial<typeof kd>) => set("dealBadges", { ...f.dealBadges, kinds: { ...f.dealBadges.kinds, [k]: { ...kd, ...p } } });
+            return (
+              <div key={k} className="grid items-end gap-3 rounded-xl border border-gray-100 bg-gray-50/60 p-3 sm:grid-cols-[1fr_1fr_1.2fr]">
+                <div><Toggle checked={kd.on} onChange={(v) => patch({ on: v })} label={`Use “${kd.label || k}” badge`} /><p className="mt-1 text-[11px] text-gray-500">{KIND_HELP[k]}</p></div>
+                <Field label="Wording"><input className="input" maxLength={24} value={kd.label} onChange={(e) => patch({ label: e.target.value })} /></Field>
+                <ColorField label="Colour" value={kd.color} onChange={(v) => patch({ color: v })} fallback={KIND_FALLBACK[k]} />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="card mt-6 space-y-4 p-5">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Animated home banner</h2>
+          <p className="text-sm text-gray-500">The built-in grocery banner (heading and text come from “Home page banner text” above). With cover images it is the first slide; with none it is the whole banner.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Toggle checked={f.heroBanner.show} onChange={(v) => set("heroBanner", { ...f.heroBanner, show: v })} label="Show the grocery banner as first slide (when cover images exist)" />
+          <Toggle checked={f.heroBanner.showBrowse} onChange={(v) => set("heroBanner", { ...f.heroBanner, showBrowse: v })} label="Show the second “Browse” link (desktop)" />
+          <Field label="Main button text"><input className="input" maxLength={30} value={f.heroBanner.ctaLabel} onChange={(e) => set("heroBanner", { ...f.heroBanner, ctaLabel: e.target.value })} /></Field>
+          <Field label="Main button link" hint="e.g. /products?sale=1 or /medicine"><input className="input" value={f.heroBanner.ctaHref} onChange={(e) => set("heroBanner", { ...f.heroBanner, ctaHref: e.target.value })} /></Field>
+        </div>
+        <Field label="Floating emoji (up to 5, separated by spaces)" hint="Empty = no floating items. Example: 🥕 🍎 🥛 🥬 🥖"><input className="input" maxLength={60} value={f.heroBanner.emojis} onChange={(e) => set("heroBanner", { ...f.heroBanner, emojis: e.target.value })} /></Field>
+      </div>
+
+      <div className="card mt-6 space-y-4 p-5">
+        <div>
+          <h2 className="text-base font-bold text-gray-900">Animations</h2>
+          <p className="text-sm text-gray-500">Customers who set “reduce motion” on their device always see fewer animations, whatever you choose here.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Toggle checked={f.fx.enabled} onChange={(v) => set("fx", { ...f.fx, enabled: v })} label="Master switch: all animations" />
+          <Toggle checked={f.fx.entrance} onChange={(v) => set("fx", { ...f.fx, entrance: v })} label="Entrance effects (banner, offer & feature cards)" />
+          <Toggle checked={f.fx.cardLift} onChange={(v) => set("fx", { ...f.fx, cardLift: v })} label="Product / offer card hover lift" />
+          <Toggle checked={f.fx.categoryFloat} onChange={(v) => set("fx", { ...f.fx, categoryFloat: v })} label="Category icon hover movement" />
+          <Toggle checked={f.fx.badgeShine} onChange={(v) => set("fx", { ...f.fx, badgeShine: v })} label="Deal badge shine" />
+          <Toggle checked={f.fx.heroFloat} onChange={(v) => set("fx", { ...f.fx, heroFloat: v })} label="Banner floating items & glow" />
+          <Toggle checked={f.fx.heroAutoplay} onChange={(v) => set("fx", { ...f.fx, heroAutoplay: v })} label="Auto-slide the banner" />
+          <Field label="Seconds per slide"><input className="input" type="number" min={2} max={30} step={0.5} value={f.fx.heroIntervalSec} onChange={(e) => set("fx", { ...f.fx, heroIntervalSec: Number(e.target.value) })} /></Field>
+          <Field label="Animation speed">
+            <select className="input" value={f.fx.speed} onChange={(e) => set("fx", { ...f.fx, speed: e.target.value as FxSettings["speed"] })}>
+              <option value="slow">Slow</option><option value="normal">Normal</option><option value="fast">Fast</option>
+            </select>
+          </Field>
+        </div>
       </div>
 
     </>

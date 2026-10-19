@@ -162,7 +162,24 @@ export const settingsSchema = z.object({
     newArrivalDays: z.coerce.number().int().min(1).max(365).default(14),
     showOffer: z.boolean().default(true),
     showOutOfStock: z.boolean().default(true),
+    bestSellerLabel: z.string().trim().max(20).optional(),
+    bestSellerColor: color,
+    newLabel: z.string().trim().max(20).optional(),
+    newColor: color,
   }).optional(),
+  fx: z.object({
+    enabled: z.boolean(), entrance: z.boolean(), cardLift: z.boolean(), categoryFloat: z.boolean(), badgeShine: z.boolean(),
+    heroFloat: z.boolean(), heroAutoplay: z.boolean(), heroIntervalSec: z.coerce.number().min(2).max(30), speed: z.enum(["slow", "normal", "fast"]),
+  }).partial().optional(),
+  dealBadges: z.object({
+    enabled: z.boolean(), onOffers: z.boolean(),
+    minDiscount: z.coerce.number().min(0).max(99), megaPct: z.coerce.number().min(1).max(99), hotPct: z.coerce.number().min(1).max(99), valuePct: z.coerce.number().min(1).max(99),
+    limitedStock: z.coerce.number().int().min(1).max(1000),
+    kinds: z.object(Object.fromEntries((["hot", "value", "mega", "limited", "exclusive"] as const).map((k) => [k, z.object({ on: z.boolean(), label: z.string().trim().max(24), color }).partial().optional()]))).partial(),
+  }).partial().optional(),
+  heroBanner: z.object({
+    show: z.boolean(), ctaLabel: z.string().trim().max(30), ctaHref: url, showBrowse: z.boolean(), emojis: z.string().trim().max(60),
+  }).partial().optional(),
   customerNidEnabled: z.boolean().optional(),
   homeSections: z.array(z.object({
     id: z.enum(["hero","features","categories","best","daily","fresh","household","offers","sale","medicine","new","buyAgain"]),

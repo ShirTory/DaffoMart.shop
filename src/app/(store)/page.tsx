@@ -7,7 +7,8 @@ import FeatureIcon from "@/components/store/FeatureIcon";
 import Reveal from "@/components/store/Reveal";
 import DealBadge from "@/components/store/DealBadge";
 import GroceryBanner from "@/components/store/GroceryBanner";
-import { dealKindForOffer, dealKindForProduct } from "@/lib/deals";
+import { dealInfo, dealKindForOffer, dealKindForProduct } from "@/lib/deals";
+import { parseEmojis, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { getActiveProducts, getBanners, getCategories, getOffers, getSettings } from "@/server/queries";
 import { discountPct, taka } from "@/lib/format";
 import { makeT } from "@/lib/texts";
@@ -114,13 +115,17 @@ export default async function Home() {
   const freshFinal = freshList.length ? freshList : fresh;
   const household = byCats(groc, settings.homeHouseholdCatIds);
 
+  const fx = resolveFx(settings.fx); const dealCfg = resolveDeals(settings.dealBadges); const hero = resolveHero(settings.heroBanner);
   const sections = resolveSections(settings.homeSections);
   const show = (id: HomeSectionId) => sections.find((s) => s.id === id)?.visible !== false;
 
   const heroText = { storeName: settings.storeName, title: settings.heroTitle || settings.tagline, subtitle: settings.heroSubtitle || settings.tagline, browseLabel: settings.heroCta || "Shop now" };
+  const heroProps = { ctaLabel: hero.ctaLabel || "Shop Deals", ctaHref: hero.ctaHref || "/products?sale=1", emojis: parseEmojis(hero.emojis), browseLabel: hero.showBrowse ? heroText.browseLabel : undefined };
   const heroBlock = (
     <div className="anim-hero">
-      {banners.length > 0 ? <HeroSlider banners={banners} lead={<GroceryBanner {...heroText} mode="slide" />} /> : <GroceryBanner {...heroText} />}
+      {banners.length > 0
+        ? <HeroSlider banners={banners} lead={hero.show ? <GroceryBanner {...heroText} {...heroProps} mode="slide" /> : undefined} autoplay={fx.heroAutoplay} intervalMs={Math.round(fx.heroIntervalSec * 1000)} />
+        : <GroceryBanner {...heroText} {...heroProps} />}
     </div>
   );
 
@@ -176,7 +181,7 @@ export default async function Home() {
       <Section title={title} href={href} viewAll={va} emoji={emoji}>
         <HScroll>
           {list.map((p, k) => (
-            <CardWrap key={p.id}><ProductCard p={p} whatsapp={settings.whatsapp} deal={deals ? dealKindForProduct(p, discountPct(p.price, p.oldPrice)) : undefined} dealDelay={k * 350} /></CardWrap>
+            <CardWrap key={p.id}><ProductCard p={p} whatsapp={settings.whatsapp} deal={deals ? (() => { const k = dealKindForProduct(p, discountPct(p.price, p.oldPrice), dealCfg); return k ? dealInfo(k, dealCfg) : null; })() : null} dealDelay={k * 350} /></CardWrap>
           ))}
         </HScroll>
       </Section>
@@ -193,7 +198,7 @@ export default async function Home() {
                 <div className="relative aspect-[16/7] overflow-hidden bg-gray-100">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={o.image!} alt="" className="h-full w-full object-cover transition duration-500 motion-safe:group-hover/offer:scale-105" loading="lazy" />
-                  <DealBadge kind={dealKindForOffer(o)} label={o.badge || undefined} delay={k * 500} className="absolute left-3 top-3 px-2.5 py-1 text-[11px]" />
+                  {(() => { const dk = dealKindForOffer(o, dealCfg); return dk ? <DealBadge deal={dealInfo(dk, dealCfg)} text={o.badge || undefined} delay={k * 500} className="absolute left-3 top-3 px-2.5 py-1 text-[11px]" /> : o.badge ? <span className="absolute left-3 top-3 rounded bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{o.badge}</span> : null; })()}
                 </div>
                 <div className="p-3">
                   <h3 className="font-bold text-gray-900">{o.title}</h3>
@@ -223,7 +228,7 @@ export default async function Home() {
                 <p className="truncate font-bold">{o.title}</p>
                 {o.code && <CopyCode code={o.code} />}
               </div>
-              {o.badge && <DealBadge kind={dealKindForOffer(o)} label={o.badge} delay={k * 500} className="absolute -top-2 right-3" />}
+              {o.badge && (() => { const dk = dealKindForOffer(o, dealCfg); return dk ? <DealBadge deal={dealInfo(dk, dealCfg)} text={o.badge} delay={k * 500} className="absolute -top-2 right-3" /> : <span className="absolute -top-2 right-3 rounded bg-accent px-2 py-0.5 text-[11px] font-bold text-white">{o.badge}</span>; })()}
             </div>
             </Reveal>
           ))}

@@ -63,7 +63,26 @@ export interface LabelRules {
   newArrivalDays: number;
   showOffer: boolean;
   showOutOfStock: boolean;
+  /** optional custom wording / colour (empty = built-in) */
+  bestSellerLabel?: string; bestSellerColor?: string;
+  newLabel?: string; newColor?: string;
 }
+
+/** Animation switches (Admin → Website content → Animations). Every field optional; see lib/fx.ts for defaults. */
+export interface FxSettings {
+  enabled: boolean; entrance: boolean; cardLift: boolean; categoryFloat: boolean; badgeShine: boolean;
+  heroFloat: boolean; heroAutoplay: boolean; heroIntervalSec: number; speed: "slow" | "normal" | "fast";
+}
+export type DealKindId = "hot" | "value" | "mega" | "limited" | "exclusive";
+export interface DealKindSettings { on: boolean; label: string; color: string }
+/** Super Deals badges: thresholds, wording, colour and on/off per badge. */
+export interface DealBadgeSettings {
+  enabled: boolean; onOffers: boolean;
+  minDiscount: number; megaPct: number; hotPct: number; valuePct: number; limitedStock: number;
+  kinds: Record<DealKindId, DealKindSettings>;
+}
+/** Built-in animated grocery banner on the home page. */
+export interface HeroBannerSettings { show: boolean; ctaLabel: string; ctaHref: string; showBrowse: boolean; emojis: string }
 
 /** accountant: Finance & Accounts only (no products, orders, settings, NID or staff data) */
 export type AdminRole = "owner" | "it_support" | "accountant";
@@ -150,6 +169,10 @@ export interface StoreSettings {
   homeBestTitle?: string;
   /** Product card label rules */
   labelRules?: LabelRules;
+  /** UI animation switches, deal badges and the animated hero banner (all optional; defaults in lib/fx.ts) */
+  fx?: Partial<FxSettings>;
+  dealBadges?: Partial<Omit<DealBadgeSettings, "kinds">> & { kinds?: Partial<Record<DealKindId, Partial<DealKindSettings>>> };
+  heroBanner?: Partial<HeroBannerSettings>;
   /** When true, checkout may collect optional customer NID (privacy-sensitive) */
   customerNidEnabled?: boolean;
 

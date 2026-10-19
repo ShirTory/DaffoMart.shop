@@ -11,6 +11,7 @@ export default function Reveal({ children, delay = 0, className = "" }: { childr
     const el = ref.current;
     if (!el || typeof IntersectionObserver === "undefined") return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (el.closest('[data-fx-entrance="off"]')) return; // switched off in Admin
     if (el.getBoundingClientRect().top < window.innerHeight * 0.95) return; // already on screen: leave as rendered
     el.classList.add("reveal-pending");
     const io = new IntersectionObserver((entries) => {
