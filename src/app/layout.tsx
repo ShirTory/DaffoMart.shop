@@ -1,3 +1,4 @@
+import GoogleTagManager from '../components/GoogleTagManager'
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { DEFAULT_DESC, DEFAULT_OG, DEFAULT_TAGLINE, SITE_NAME, SITE_URL } from "@/lib/site";
@@ -37,7 +38,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema).replace(/</g, "\\u003c") }} /></head>
-      <body className="font-sans">{children}</body>
+      <body className="font-sans">
+        <GoogleTagManager />{children}</body>
     </html>
   );
 }
