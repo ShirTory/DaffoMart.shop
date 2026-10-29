@@ -1,0 +1,12 @@
+# Netlify + Next.js 15 (App Router)
+# Docs: https://docs.netlify.com/frameworks/next-js/overview/
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,NEXT_PUBLIC_SITE_URL"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

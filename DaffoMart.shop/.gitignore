@@ -1,0 +1,26 @@
+# dependencies / build output
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.netlify/
+.vercel/
+
+# SECRETS - never commit (use .env.example as the template)
+.env
+.env.*
+!.env.example
+
+# local database + uploads (customer data, NID photos, images)
+.data/
+.firebase/
+firebase-debug.log*
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+npm-debug.log*

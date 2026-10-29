@@ -1,0 +1,9 @@
+# Keep line endings identical on Windows and Linux/Netlify so Git stops showing every file as "modified".
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.xlsx binary
+*.woff2 binary

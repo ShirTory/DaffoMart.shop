@@ -1,0 +1,69 @@
+rules_version = '2';
+// DaffoMart — deploy via Firebase Console or `firebase deploy --only firestore:rules`
+// The Next.js app uses the Admin SDK (bypasses these rules). Rules protect direct client SDK access.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+
+    // Public catalogue (read-only for clients)
+    match /products/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+    match /categories/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+    match /banners/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+    match /offers/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+    match /settings/{id} {
+      allow read: if true; // public store settings (no secrets stored here)
+      allow write: if false;
+    }
+    match /zones/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+    match /payment_methods/{id} {
+      allow read: if resource.data.active == true;
+      allow write: if false;
+    }
+
+    // Sensitive — Admin SDK only
+    match /orders/{id} { allow read, write: if false; }
+    match /riders/{id} { allow read, write: if false; }
+    match /employees/{id} { allow read, write: if false; }
+    match /attendance/{id} { allow read, write: if false; }
+    match /stocklogs/{id} { allow read, write: if false; }
+    match /nid/{id} { allow read, write: if false; }
+    match /images/{id} { allow read, write: if false; }
+    match /admins/{id} { allow read, write: if false; }
+    match /audit_logs/{id} { allow read, write: if false; }
+    // Customer Database (CRM): phone numbers, addresses and notes are private — served only by role-checked admin API routes
+    match /customers/{id} { allow read, write: if false; }
+    match /finance_expenses/{id} { allow read, write: if false; }
+    match /finance_incomes/{id} { allow read, write: if false; }
+    match /couriers/{id} { allow read, write: if false; }
+    match /ratings/{id} { allow read, write: if false; }
+    match /issues/{id} { allow read, write: if false; }
+    match /suppliers/{id} { allow read, write: if false; }
+    match /purchases/{id} { allow read, write: if false; }
+    match /payroll/{id} { allow read, write: if false; }
+    match /finance_payments/{id} { allow read, write: if false; }
+    match /finance_accounts/{id} { allow read, write: if false; }
+    match /sku_index/{id} { allow read, write: if false; }
+    // WhatsApp / calling settings and message delivery logs: Admin SDK only (API tokens are never stored in Firestore — environment variables only)
+    match /integrations/{id} { allow read, write: if false; }
+    match /message_logs/{id} { allow read, write: if false; }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
