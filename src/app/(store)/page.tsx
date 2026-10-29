@@ -12,6 +12,7 @@ import Ticker from "@/components/store/Ticker";
 import OffersCarousel from "@/components/store/OffersCarousel";
 import { offerProducts } from "@/lib/offers";
 import { resolveTheme, TICKER_SECONDS_PER_ITEM } from "@/lib/storeTheme";
+import { validHex } from "@/lib/theme";
 import { dealInfo, dealKindForOffer, dealKindForProduct } from "@/lib/deals";
 import { parseEmojis, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { getActiveProducts, getBanners, getCategories, getOffers, getSettings } from "@/server/queries";

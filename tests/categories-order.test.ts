@@ -13,7 +13,7 @@ const reorder = await import("@/app/api/categories/reorder/route");
 
 const jar = (j: Record<string, string> = {}) => ((globalThis as any).__testCookies = j);
 const post = async (body: unknown) => {
-  const r: Response = await reorder.POST(new Request("http://t.test/api/categories/reorder", { method: "POST", headers: { "content-type": "application/json", "x-real-ip": "7.7.7.7" }, body: JSON.stringify(body) }));
+  const r: Response = await reorder.POST(new Request("http://t.test/api/categories/reorder", { method: "POST", headers: { "content-type": "application/json", "x-real-ip": "7.7.7.7" }, body: JSON.stringify(body) }), { params: Promise.resolve({}) });
   return { status: r.status, body: await r.json().catch(() => null) };
 };
 const mk = async (name: string, sortOrder: number) => { const id = newId(); await db.put("categories", { id, name, slug: name.toLowerCase(), emoji: "🛍️", active: true, sortOrder } as any); return id; };
