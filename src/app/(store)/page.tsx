@@ -8,12 +8,15 @@ import Reveal from "@/components/store/Reveal";
 import DealBadge from "@/components/store/DealBadge";
 import GroceryBanner from "@/components/store/GroceryBanner";
 import MedicineCta from "@/components/store/MedicineCta";
+import Ticker from "@/components/store/Ticker";
+import OffersCarousel from "@/components/store/OffersCarousel";
+import { offerProducts } from "@/lib/offers";
+import { resolveTheme, TICKER_SECONDS_PER_ITEM } from "@/lib/storeTheme";
 import { dealInfo, dealKindForOffer, dealKindForProduct } from "@/lib/deals";
 import { parseEmojis, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
 import { getActiveProducts, getBanners, getCategories, getOffers, getSettings } from "@/server/queries";
 import { discountPct, taka } from "@/lib/format";
 import { makeT } from "@/lib/texts";
-import { validHex } from "@/lib/theme";
 import { pageMeta } from "@/lib/seo";
 import type { Metadata } from "next";
 import type { Category, HomeSectionConfig, HomeSectionId, Product } from "@/lib/types";
@@ -29,6 +32,7 @@ const DEFAULT_SECTIONS: HomeSectionConfig[] = [
   { id: "daily", visible: true },
   { id: "fresh", visible: true },
   { id: "household", visible: true },
+  { id: "offerProducts", visible: true },
   { id: "offers", visible: true },
   { id: "sale", visible: true },
   { id: "medicine", visible: true },
@@ -37,8 +41,8 @@ const DEFAULT_SECTIONS: HomeSectionConfig[] = [
 
 const Section = ({ title, children, href, emoji, viewAll = "View all →", prominent }: { title: string; children: React.ReactNode; href?: string; emoji?: string; viewAll?: string; prominent?: boolean }) => (
   <section className="mt-6 sm:mt-8">
-    <div className="mb-3 flex items-end justify-between gap-3">
-      <h2 className={prominent ? "text-xl font-black tracking-tight text-gray-900 sm:text-2xl md:text-3xl" : "text-lg font-extrabold tracking-tight text-gray-900 sm:text-xl md:text-2xl"}>
+    <div className="sec-head">
+      <h2 className={`sec-title ${prominent ? "text-xl font-black tracking-tight text-gray-900 sm:text-2xl md:text-3xl" : "text-lg font-extrabold tracking-tight text-gray-900 sm:text-xl md:text-2xl"}`}>
         {emoji && <span className="mr-1.5">{emoji}</span>}
         {title}
       </h2>
@@ -52,14 +56,15 @@ const Section = ({ title, children, href, emoji, viewAll = "View all →", promi
   </section>
 );
 
-const HScroll = ({ children }: { children: React.ReactNode }) => (
-  <div className="no-scrollbar -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-2 sm:pt-0 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+/** Mobile: swipeable row. Desktop: responsive grid (default) or, with the "scroll" website-theme layout, one scrollable row. */
+const HScroll = ({ children, grid = true }: { children: React.ReactNode; grid?: boolean }) => (
+  <div className={`no-scrollbar -mx-4 -mb-2 -mt-2 flex gap-3 overflow-x-auto px-4 pb-4 pt-2 sm:mx-0 sm:mb-0 sm:mt-0 sm:px-0 sm:pb-2 sm:pt-0 ${grid ? "sm:grid sm:grid-cols-3 sm:overflow-visible md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6" : ""}`}>
     {children}
   </div>
 );
 
-const CardWrap = ({ children }: { children: React.ReactNode }) => (
-  <div className="w-[42vw] max-w-[180px] shrink-0 sm:w-auto sm:max-w-none">{children}</div>
+const CardWrap = ({ children, grid = true }: { children: React.ReactNode; grid?: boolean }) => (
+  <div className={`w-[42vw] max-w-[180px] shrink-0 ${grid ? "sm:w-auto sm:max-w-none" : "sm:w-[200px] sm:max-w-none"}`}>{children}</div>
 );
 
 const CAT_W = { sm: "w-[76px] sm:w-[92px]", md: "w-[88px] sm:w-[104px]", lg: "w-[104px] sm:w-[124px]" } as Record<string, string>;
@@ -81,9 +86,12 @@ function resolveSections(cfg?: HomeSectionConfig[]): HomeSectionConfig[] {
     seen.add(s.id);
     out.push({ id: s.id, visible: s.visible !== false });
   }
-  for (const d of DEFAULT_SECTIONS) {
-    if (!seen.has(d.id)) out.push(d);
-  }
+  DEFAULT_SECTIONS.forEach((d, i) => {
+    if (seen.has(d.id)) return;
+    // a section added by an upgrade appears right after the default section that precedes it, not at the very bottom
+    const prev = DEFAULT_SECTIONS.slice(0, i).reverse().map((x) => out.findIndex((o) => o.id === x.id)).find((k) => k >= 0);
+    out.splice(prev === undefined ? out.length : prev + 1, 0, d);
+  });
   return out;
 }
 
@@ -118,6 +126,7 @@ export default async function Home() {
 
   const fx = resolveFx(settings.fx); const dealCfg = resolveDeals(settings.dealBadges); const hero = resolveHero(settings.heroBanner);
   const sections = resolveSections(settings.homeSections);
+  const theme = resolveTheme(settings); const nowMs = Date.now(); const grid = theme.productLayout === "grid";
   const show = (id: HomeSectionId) => sections.find((s) => s.id === id)?.visible !== false;
 
   const heroText = { storeName: settings.storeName, title: settings.heroTitle || settings.tagline, subtitle: settings.heroSubtitle || settings.tagline, browseLabel: settings.heroCta || "Shop now" };
@@ -191,12 +200,26 @@ export default async function Home() {
     );
   };
 
+  const title = (id: HomeSectionId, fallback: string) => theme.titles[id]?.trim() || fallback;
+  const tickRepeat = Math.max(1, Math.ceil(14 / Math.max(1, shopCats.length))); // one copy must be wider than the screen for a seamless loop
+  const offerList = offerProducts(products, theme.offersLimit, nowMs);
+  const offerProductsBlock = offerList.length > 0 ? (
+    <Section title={title("offerProducts", "Offers")} href="/products?sale=1" viewAll={va} emoji="🏷️" prominent>
+      <OffersCarousel products={offerList} whatsapp={settings.whatsapp} dealCfg={dealCfg} speed={theme.offersSpeed} label={title("offerProducts", "Offers")} now={nowMs} />
+    </Section>
+  ) : null;
+
   const categoriesBlock = settings.showCatSection !== false && shopCats.length > 0 ? (
     <>
       <MedicineCta settings={settings} />
-      <Section title={t("home.categories")} href={settings.catShowSeeAll === false ? undefined : "/products"} viewAll={va} prominent>
+      <Section title={title("categories", t("home.categories"))} href={settings.catShowSeeAll === false ? undefined : "/products"} viewAll={va} prominent>
         {settings.catLayout === "grid" ? (
           <div className={`grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm} [&>a]:!w-full`}>{shopCats.map(catCard)}</div>
+        ) : theme.catTicker ? (
+          // auto-moving strip (Admin → Website Theme); uses the same category cards as the grid
+          <Ticker label={title("categories", t("home.categories"))} seconds={shopCats.length * tickRepeat * TICKER_SECONDS_PER_ITEM[theme.catTickerSpeed]}>
+            {Array.from({ length: tickRepeat }, (_, r) => shopCats.map((c) => <div key={`${c.id}-${r}`} className="mr-2 flex">{catCard(c)}</div>))}
+          </Ticker>
         ) : (
           <div className={`no-scrollbar -mx-4 -mt-1 flex overflow-x-auto px-4 pb-2 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm}`}>{shopCats.map(catCard)}</div>
         )}
@@ -207,9 +230,9 @@ export default async function Home() {
   const productSection = (title: string, list: Product[], href: string, emoji?: string, deals = false) =>
     list.length > 0 ? (
       <Section title={title} href={href} viewAll={va} emoji={emoji}>
-        <HScroll>
+        <HScroll grid={grid}>
           {list.map((p, k) => (
-            <CardWrap key={p.id}><ProductCard p={p} whatsapp={settings.whatsapp} deal={deals ? (() => { const k = dealKindForProduct(p, discountPct(p.price, p.oldPrice), dealCfg); return k ? dealInfo(k, dealCfg) : null; })() : null} dealDelay={k * 350} /></CardWrap>
+            <CardWrap key={p.id} grid={grid}><ProductCard p={p} whatsapp={settings.whatsapp} deal={deals ? (() => { const k = dealKindForProduct(p, discountPct(p.price, p.oldPrice), dealCfg); return k ? dealInfo(k, dealCfg) : null; })() : null} dealDelay={k * 350} /></CardWrap>
           ))}
         </HScroll>
       </Section>
@@ -270,16 +293,17 @@ export default async function Home() {
     features: featuresBlock,
     categories: categoriesBlock,
     buyAgain: <BuyAgain />,
-    best: productSection(settings.homeBestTitle || t("home.trending"), best, "/products?sort=popular", "📈"),
-    daily: productSection(settings.homeDailyTitle || "Daily Essentials", dailyList, daily.length ? `/products?cat=${settings.homeDailyCatIds![0]}` : "/products?featured=1", "🛒"),
-    fresh: productSection(settings.homeFreshTitle || "Fresh Food & Grocery", freshFinal, "/products", "🥬"),
-    household: productSection(settings.homeHouseholdTitle || "Household Essentials", household, household.length && settings.homeHouseholdCatIds?.[0] ? `/products?cat=${settings.homeHouseholdCatIds[0]}` : "/products", "🏠"),
+    best: productSection(title("best", settings.homeBestTitle || t("home.trending")), best, "/products?sort=popular", "📈"),
+    daily: productSection(title("daily", settings.homeDailyTitle || "Daily Essentials"), dailyList, daily.length ? `/products?cat=${settings.homeDailyCatIds![0]}` : "/products?featured=1", "🛒"),
+    fresh: productSection(title("fresh", settings.homeFreshTitle || "Fresh Food & Grocery"), freshFinal, "/products", "🥬"),
+    household: productSection(title("household", settings.homeHouseholdTitle || "Household Essentials"), household, household.length && settings.homeHouseholdCatIds?.[0] ? `/products?cat=${settings.homeHouseholdCatIds[0]}` : "/products", "🏠"),
+    offerProducts: offerProductsBlock,
     offers: offersBlock,
-    sale: productSection(t("home.hot"), sale, "/products?sale=1", "🔥", true),
+    sale: productSection(title("sale", t("home.hot")), sale, "/products?sale=1", "🔥", true),
     medicine: settings.showMedicine && meds.length > 0
-      ? productSection(settings.medicineTitle || "Medicine & Healthcare", meds.slice(0, 10), "/medicine", "💊")
+      ? productSection(title("medicine", settings.medicineTitle || "Medicine & Healthcare"), meds.slice(0, 10), "/medicine", "💊")
       : null,
-    new: productSection(t("home.new"), fresh, "/products", "✨"),
+    new: productSection(title("new", t("home.new")), fresh, "/products", "✨"),
   };
 
   return (

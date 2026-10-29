@@ -15,5 +15,5 @@ export const GET = handle(async () => {
 export const POST = handle(async (req) => {
   await requireAdmin();
   const d = inventorySchema.parse(await readJson(req));
-  return ok(await adjustStock(d.productId, d.mode, d.qty, d.reason));
+  return ok(await adjustStock(d.productId, d.mode, d.qty, d.reason, d.variantId));
 });

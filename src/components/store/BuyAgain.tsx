@@ -16,7 +16,7 @@ export default function BuyAgain() {
 
   const reorder = () => {
     for (const i of snap.items) {
-      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image }, i.qty);
+      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image, ...(i.variantId ? { vid: i.variantId, vlabel: i.variantLabel } : {}) }, i.qty);
     }
     router.push("/cart");
   };

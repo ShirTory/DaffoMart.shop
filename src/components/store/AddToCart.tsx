@@ -2,7 +2,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/store";
-import type { Product } from "@/lib/types";
+import type { Product, ProductVariant } from "@/lib/types";
+import { variantLabel } from "@/lib/variants";
 import { useFlags, useT } from "./TextsProvider";
 
 export default function AddToCart({
@@ -10,8 +11,11 @@ export default function AddToCart({
   withQty = false,
   showBuyNow = false,
   whatsapp,
+  variant,
 }: {
   product: Product;
+  /** the size / weight / colour the customer chose; its price and stock replace the product's. Required for products with variants. */
+  variant?: ProductVariant;
   withQty?: boolean;
   showBuyNow?: boolean;
   /** full international digits e.g. 8801XXXXXXXXX — if set, shows WhatsApp button */
@@ -21,11 +25,14 @@ export default function AddToCart({
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [done, setDone] = useState(false);
-  const out = product.stock <= 0;
+  const stock = variant ? variant.stock : product.stock;
+  const out = stock <= 0;
+  const label = variant ? variantLabel(variant) : product.unit;
 
   const line = () => ({
-    id: product.id, slug: product.slug, name: product.name, price: product.price,
-    unit: product.unit, emoji: product.emoji, image: product.image, stock: product.stock, rx: product.prescriptionRequired,
+    id: product.id, slug: product.slug, name: product.name, price: variant ? variant.price : product.price,
+    unit: label, emoji: product.emoji, image: product.image, stock, rx: product.prescriptionRequired,
+    ...(variant ? { vid: variant.id, vlabel: label } : {}),
   });
 
   const onAdd = () => {
@@ -41,7 +48,7 @@ export default function AddToCart({
 
   const wa = (whatsapp || "").replace(/\D/g, "");
   const waHref = wa
-    ? `https://wa.me/${wa}?text=${encodeURIComponent(`Hi, I want to order: ${product.name} (${product.unit}) × ${qty}`)}`
+    ? `https://wa.me/${wa}?text=${encodeURIComponent(`Hi, I want to order: ${product.name} (${label}) × ${qty}`)}`
     : "";
 
   return (
@@ -51,7 +58,7 @@ export default function AddToCart({
           <div className="flex items-center rounded-lg border bg-white">
             <button type="button" className="px-2.5 py-1.5 text-lg hover:bg-gray-50" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
             <span className="w-7 text-center text-sm font-semibold">{qty}</span>
-            <button type="button" className="px-2.5 py-1.5 text-lg hover:bg-gray-50" onClick={() => setQty((q) => Math.min(product.stock, q + 1))} aria-label="Increase">+</button>
+            <button type="button" className="px-2.5 py-1.5 text-lg hover:bg-gray-50" onClick={() => setQty((q) => Math.min(stock, q + 1))} aria-label="Increase">+</button>
           </div>
         </div>
       )}

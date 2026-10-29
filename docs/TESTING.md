@@ -7,6 +7,7 @@ Uses Node's built-in test runner with a tiny resolver (`tests/hooks.mjs`) for th
 |---|---|
 | `tests/orders.test.ts` | stock decrement, idempotent checkout, 10-way concurrency on 3 units, all-or-nothing rollback, cancel/return stock restore, `deliveredAt` |
 | `tests/finance.test.ts` | Dhaka day boundaries, revenue dating, P&L, cash-basis cash-flow, duplicate-income guard, date validation, rounding |
+| `tests/crm-excel-whatsapp.test.ts` | phone normalization, .xlsx writer/reader (formula injection, zip-bomb, row limits), CRM (dedupe by phone, order linking, stats, blocked customers, segments, backfill), Excel import/export (preview vs commit, duplicates, row errors, round trip), offer windows, WhatsApp (skipped / accepted / failed, no double send, retry, webhook signature + monotonic status), calling placeholder (501) |
 | `tests/auth.test.ts` | IT Support without full access gets 403, forged-token claims ignored, revoke/deactivate/delete take effect immediately |
 
 ## Manual staging smoke tests (not yet performed — require Firebase + a browser)

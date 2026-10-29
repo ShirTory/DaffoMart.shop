@@ -10,7 +10,8 @@ export function useMounted() {
 import { create } from "zustand";
 import { api } from "./api";
 import { useCart } from "./store";
-import type { Product } from "./types";
+import type { CartItem, Product } from "./types";
+import { findVariant, hasVariants, variantLabel } from "./variants";
 
 /** Messages about cart lines the server removed or reduced during the last sync (shown by <CartNotice/>). */
 export const useCartNotice = create<{ messages: string[]; set: (m: string[]) => void }>((set) => ({ messages: [], set: (messages) => set({ messages }) }));
@@ -27,16 +28,23 @@ export function useCartSync() {
         const { items } = await api<{ items: Product[] }>(`/api/products?ids=${ids.map(encodeURIComponent).join(",")}&limit=100`);
         const map = new Map(items.map((p) => [p.id, p]));
         const messages: string[] = [];
+        // the stock and price that apply to a cart line: the chosen variant's when the product has variants, else the product's
+        const resolve = (i: CartItem) => {
+          const p = map.get(i.id); if (!p) return null;
+          if (hasVariants(p)) { const v = findVariant(p, i.vid); return v ? { p, price: v.price, stock: v.stock, unit: variantLabel(v) } : null; }
+          return i.vid ? null : { p, price: p.price, stock: p.stock, unit: p.unit };
+        };
         for (const i of useCart.getState().items) {
-          const p = map.get(i.id);
-          if (!p || p.stock <= 0) messages.push(`${i.name} is no longer available and was removed from your cart.`);
-          else if (i.qty > p.stock) messages.push(`Only ${p.stock} of ${i.name} left. We updated your quantity.`);
+          const r = resolve(i);
+          if (!r || r.stock <= 0) messages.push(`${i.name}${i.vlabel ? ` (${i.vlabel})` : ""} is no longer available and was removed from your cart.`);
+          else if (i.qty > r.stock) messages.push(`Only ${r.stock} of ${i.name}${i.vlabel ? ` (${i.vlabel})` : ""} left. We updated your quantity.`);
         }
         useCartNotice.getState().set(messages);
         useCart.setState((s) => ({
-          items: s.items.filter((i) => map.has(i.id) && map.get(i.id)!.stock > 0).map((i) => {
-            const p = map.get(i.id)!;
-            return { ...i, slug: p.slug, name: p.name, price: p.price, unit: p.unit, image: p.image, emoji: p.emoji, stock: p.stock, rx: p.prescriptionRequired, qty: Math.min(i.qty, p.stock) };
+          items: s.items.flatMap((i) => {
+            const r = resolve(i);
+            if (!r || r.stock <= 0) return [];
+            return [{ ...i, slug: r.p.slug, name: r.p.name, price: r.price, unit: r.unit, ...(i.vid ? { vlabel: r.unit } : {}), image: r.p.image, emoji: r.p.emoji, stock: r.stock, rx: r.p.prescriptionRequired, qty: Math.min(i.qty, r.stock) }];
           }),
         }));
       } catch { /* offline: keep local cart */ }

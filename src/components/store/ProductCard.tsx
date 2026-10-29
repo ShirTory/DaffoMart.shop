@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { discountPct, taka } from "@/lib/format";
 import type { Product } from "@/lib/types";
+import { hasVariants, priceRange } from "@/lib/variants";
 import { useCart } from "@/lib/store";
 import { useMounted } from "@/lib/hooks";
 import { clampQty, remainingStock } from "@/lib/cartRules";
@@ -38,6 +39,7 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
   const t = useT(); const flags = useFlags();
   const off = discountPct(p.price, p.oldPrice);
   const out = p.stock <= 0;
+  const vr = hasVariants(p); // has size / weight / colour options
   const left = remainingStock(p.stock, inCart);      // units that can still be added
   const maxed = !out && left === 0;                  // everything in stock is already in the cart
   const sel = clampQty(qty, left);                   // 1 … left, or 0 when nothing can be added
@@ -102,11 +104,17 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
         )}
         <div className="mt-auto pt-2">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
+            {vr && priceRange(p.variants!).min < priceRange(p.variants!).max && <span className="text-[10px] font-medium text-gray-500">From</span>}
             <span className="price-now text-lg font-extrabold leading-tight">{taka(p.price)}</span>
             {p.oldPrice && p.oldPrice > p.price && <span className="text-xs text-gray-400 line-through">{taka(p.oldPrice)}</span>}
-            {flags.cardShowUnit && p.unit && <span className="text-[11px] text-gray-500">/ {p.unit}</span>}
+            {!vr && flags.cardShowUnit && p.unit && <span className="text-[11px] text-gray-500">/ {p.unit}</span>}
+            {vr && <span className="text-[11px] text-gray-500">{p.variants!.length} options</span>}
           </div>
           <div className="space-y-1.5 pt-2.5">
+            {vr ? (
+              // size / weight / colour must be chosen first, so the card sends the customer to the product page
+              <Link href={`/products/${p.slug}`} className={`flex h-10 w-full items-center justify-center ${out ? "btn cursor-not-allowed bg-gray-100 text-gray-400" : "btn-primary"}`} aria-disabled={out}>{out ? t("card.out") : "Choose options"}</Link>
+            ) : (<>
             {!out && flags.cardShowQtyStepper && (
               <div className="flex items-center gap-2">
                 <div className="flex h-9 shrink-0 items-center overflow-hidden rounded-lg border border-gray-200 bg-white" role="group" aria-label="Quantity">
@@ -145,6 +153,7 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
                 )}
               </div>
             )}
+            </>)}
           </div>
         </div>
       </div>

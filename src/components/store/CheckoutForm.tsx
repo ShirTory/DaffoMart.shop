@@ -1,4 +1,5 @@
 "use client";
+import { lineKey } from "@/lib/cartRules";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -7,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { api } from "@/lib/api";
 import { useCart } from "@/lib/store";
 import { saveLastOrder } from "@/lib/lastOrder";
+import { loadSavedCustomer, saveCustomer } from "@/lib/savedCustomer";
 import { useCartSync, useCoupon } from "@/lib/hooks";
 import { normPhone, taka } from "@/lib/format";
 import { mapsEmbed } from "@/lib/maps";
@@ -34,7 +36,7 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
   // One random key per distinct cart: a double-tap, slow network retry or re-submit sends the SAME key, so the server returns the same order.
   const attempt = useRef<{ fp: string; key: string } | null>(null);
   const attemptKey = () => {
-    const fp = items.map((i) => `${i.id}x${i.qty}`).sort().join(",");
+    const fp = items.map((i) => `${lineKey(i)}x${i.qty}`).sort().join(",");
     if (!attempt.current || attempt.current.fp !== fp) {
       const rnd = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID().replace(/-/g, "") : Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join("");
       attempt.current = { fp, key: rnd };
@@ -42,7 +44,12 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
     return attempt.current.key;
   };
   useCartSync();
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { zone: zones[0]?.id ?? "", payment: (payments.find((p) => !p.disabled) ?? payments[0])?.id ?? "" } });
+  const { register, handleSubmit, watch, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { zone: zones[0]?.id ?? "", payment: (payments.find((p) => !p.disabled) ?? payments[0])?.id ?? "" } });
+  useEffect(() => { // returning customer: pre-fill what they typed last time (stays on this device)
+    const c = loadSavedCustomer();
+    if (c.name) setValue("name", c.name); if (c.phone) setValue("phone", c.phone); if (c.address) setValue("address", c.address);
+    if (c.zone && zones.some((z) => z.id === c.zone)) setValue("zone", c.zone);
+  }, [setValue, zones]);
   const zone = watch("zone"); const pay = watch("payment"); const payOpt = payments.find((p) => p.id === pay);
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
   const c = useCoupon(subtotal);
@@ -67,13 +74,14 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
     try {
       const selected = payments.find((p) => p.id === d.payment);
       const manual = d.payment === "bkash" || d.payment === "nagad" || (d.payment !== "cod" && d.payment !== "online" && selected?.requireTrx !== false);
-      const r = await api<{ orderNo: string }>("/api/orders", { method: "POST", body: { ...d, paymentRef: manual ? d.paymentRef : undefined, paymentFrom: manual ? d.paymentFrom : undefined, lat: pin?.lat, lng: pin?.lng, couponCode: c.code || undefined, idempotencyKey: attemptKey(), items: items.map((i) => ({ id: i.id, qty: i.qty })) } });
+      const r = await api<{ orderNo: string }>("/api/orders", { method: "POST", body: { ...d, paymentRef: manual ? d.paymentRef : undefined, paymentFrom: manual ? d.paymentFrom : undefined, lat: pin?.lat, lng: pin?.lng, couponCode: c.code || undefined, idempotencyKey: attemptKey(), items: items.map((i) => ({ id: i.id, ...(i.vid ? { variantId: i.vid } : {}), qty: i.qty })) } });
       let payLater = false;
       if (d.payment === "online") { // hand over to the payment gateway page
-        try { const g = await api<{ url: string }>("/api/payments/online/init", { method: "POST", body: { orderNo: r.orderNo, phone: d.phone } }); saveLastOrder(r.orderNo, items.map((i) => ({ id: i.id, name: i.name, unit: i.unit, price: i.price, qty: i.qty, image: i.image, emoji: i.emoji }))); clear(); window.location.href = g.url; return; }
+        try { const g = await api<{ url: string }>("/api/payments/online/init", { method: "POST", body: { orderNo: r.orderNo, phone: d.phone } }); saveLastOrder(r.orderNo, items.map((i) => ({ id: i.id, ...(i.vid ? { variantId: i.vid, variantLabel: i.vlabel } : {}), name: i.name, unit: i.unit, price: i.price, qty: i.qty, image: i.image, emoji: i.emoji }))); clear(); window.location.href = g.url; return; }
         catch { payLater = true; /* gateway unavailable: order is saved, the customer can retry from the Track page */ }
       }
-      saveLastOrder(r.orderNo, items.map((i) => ({ id: i.id, name: i.name, unit: i.unit, price: i.price, qty: i.qty, image: i.image, emoji: i.emoji })));
+      saveLastOrder(r.orderNo, items.map((i) => ({ id: i.id, ...(i.vid ? { variantId: i.vid, variantLabel: i.vlabel } : {}), name: i.name, unit: i.unit, price: i.price, qty: i.qty, image: i.image, emoji: i.emoji })));
+      saveCustomer({ name: d.name, phone: d.phone, address: d.address, zone: d.zone });
       clear(); setPlaced({ orderNo: r.orderNo, phone: d.phone, payLater });
     } catch (e: any) { setError(e.message); }
   };
@@ -92,7 +100,7 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
 
   const Err = ({ m }: { m?: string }) => (m ? <p className="mt-1 text-xs text-red-600">{m}</p> : null);
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+    <form onSubmit={handleSubmit(onSubmit)} className="grid gap-6 pb-20 md:pb-0 lg:grid-cols-[1fr_360px]">
       <div className="space-y-5 rounded-2xl border bg-white p-5 shadow-card sm:p-6">
         <CartNotice />
         <div><h1 className="text-xl font-bold">{t("checkout.details")}</h1><p className="text-sm text-gray-500">No account needed — just tell us where to deliver.</p></div>
@@ -101,11 +109,11 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
           <div><label className="label">Mobile number</label><input className="input" placeholder="01XXXXXXXXX" inputMode="numeric" autoComplete="tel" {...register("phone")} /><Err m={errors.phone?.message} /></div>
         </div>
         <div><label className="label">Full address</label><textarea className="input" rows={2} placeholder="House, road, area" autoComplete="street-address" {...register("address")} /><Err m={errors.address?.message} /></div>
-        <div><label className="label">Delivery location (optional)</label>
-          <div className="rounded-xl border border-dashed border-gray-300 p-3.5 text-sm">
+        <details><summary className="cursor-pointer text-sm font-semibold text-primary">📍 Help the rider find you: share my location (optional)</summary>
+          <div className="mt-2 rounded-xl border border-dashed border-gray-300 p-3.5 text-sm">
             <div className="flex flex-wrap items-center gap-3"><button type="button" onClick={locate} disabled={locBusy} className="btn-outline">{locBusy ? "Finding…" : pin ? "📍 Update my location" : "📍 Use my current location"}</button><span className="text-xs text-gray-500">{pin ? "Location attached — the rider can navigate exactly to you." : "Helps the rider find you faster."}</span></div>
             {locMsg && <p className="mt-2 text-xs text-red-600">{locMsg}</p>}
-            {pin && <><iframe title="Your location" src={mapsEmbed(pin)} className="mt-3 h-40 w-full rounded-lg border-0" loading="lazy" /><button type="button" onClick={() => setPin(null)} className="mt-1 text-xs font-medium text-red-600 hover:underline">Remove location</button></>}</div></div>
+            {pin && <><iframe title="Your location" src={mapsEmbed(pin)} className="mt-3 h-40 w-full rounded-lg border-0" loading="lazy" /><button type="button" onClick={() => setPin(null)} className="mt-1 text-xs font-medium text-red-600 hover:underline">Remove location</button></>}</div></details>
         <div><label className="label">Delivery area</label>
           <div className="grid gap-3 sm:grid-cols-2">{zones.map((x) => (
             <label key={x.id} className={`flex cursor-pointer items-center justify-between gap-2 rounded-xl border-2 p-3.5 text-sm transition ${zone === x.id ? "border-primary bg-primary-soft" : "border-gray-200"}`}><span className="flex items-center gap-2"><input type="radio" value={x.id} {...register("zone")} className="accent-primary" /><span><b>{x.name}</b>{x.eta && <span className="block text-xs text-gray-500">{x.eta}</span>}</span></span><span className="text-right text-gray-600">{x.charge === 0 ? "Free" : taka(x.charge)}{x.freeOver > 0 && <span className="block text-[11px] text-emerald-700">Free over {taka(x.freeOver)}</span>}</span></label>))}</div>
@@ -119,12 +127,12 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
             <div className="mt-3 space-y-3 rounded-xl bg-amber-50 p-4 text-sm">{payOpt.number ? <p>Send <b>{taka(total)}</b> to <b className="font-mono text-base">{payOpt.number}</b> ({payOpt.label}).</p> : <p>Pay <b>{taka(total)}</b> via <b>{payOpt.label}</b>. {payOpt.hint}</p>}{instructions && <p className="text-xs text-amber-900">{instructions}</p>}
               <div className="grid gap-3 sm:grid-cols-2"><div><label className="label">Transaction ID (TrxID)</label><input className="input uppercase" placeholder="e.g. 9A7B6C5D4E" {...register("paymentRef")} /></div><div><label className="label">Number you paid from</label><input className="input" inputMode="numeric" placeholder="01XXXXXXXXX" {...register("paymentFrom")} /></div></div></div>)}
           {payments.length === 0 && <p className="mt-1 text-xs text-red-600">No payment method is available right now. Please contact us.</p>}</div>
-        <div><label className="label">Order note (optional)</label><textarea className="input" rows={2} placeholder="Any special instruction for delivery" {...register("note")} /></div>
+        <details><summary className="cursor-pointer text-sm font-semibold text-primary">✏️ Add an order note (optional)</summary><textarea className="input mt-2" rows={2} placeholder="Any special instruction for delivery" {...register("note")} /></details>
       </div>
       <aside className="h-fit space-y-3 rounded-2xl border bg-white p-5 text-sm shadow-card lg:sticky lg:top-40">
         <h2 className="text-base font-bold">{t("checkout.summary")}</h2>
         <ul className="max-h-64 space-y-3 overflow-y-auto pr-1">{items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-soft text-xl">{i.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={i.image} alt="" className="h-full w-full object-cover" /> : i.emoji}</div><div className="min-w-0 flex-1"><p className="truncate font-medium">{i.name}</p><p className="text-xs text-gray-500">{i.qty} × {taka(i.price)}</p></div><span className="font-semibold">{taka(i.price * i.qty)}</span></li>))}</ul>
+          <li key={lineKey(i)} className="flex items-center gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-primary-soft text-xl">{i.image ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={i.image} alt="" className="h-full w-full object-cover" /> : i.emoji}</div><div className="min-w-0 flex-1"><p className="truncate font-medium">{i.name}{i.vlabel ? ` · ${i.vlabel}` : ""}</p><p className="text-xs text-gray-500">{i.qty} × {taka(i.price)}</p></div><span className="font-semibold">{taka(i.price * i.qty)}</span></li>))}</ul>
         <hr />
         <div className="flex justify-between"><span className="text-gray-600">Subtotal</span><span>{taka(subtotal)}</span></div>
         {c.discount > 0 && <div className="flex justify-between text-emerald-700"><span>Discount ({c.code})</span><span>−{taka(c.discount)}</span></div>}
@@ -134,9 +142,13 @@ export default function CheckoutForm({ zones, minOrder = 0, payments, instructio
         {c.error && c.code && <p className="rounded bg-amber-50 p-2 text-xs text-amber-800">Coupon not applied: {c.error}</p>}
         {error && <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         {minOrder > 0 && subtotal < minOrder && <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Minimum order amount is {taka(minOrder)}. Add {taka(minOrder - subtotal)} more.</p>}
-        <button className="btn-accent w-full py-3 text-base" disabled={isSubmitting || !zones.length || !payments.some((p) => !p.disabled) || (minOrder > 0 && subtotal < minOrder)}>{isSubmitting ? t("checkout.placing") : t("checkout.place")}</button>
+        <button className="btn-accent hidden w-full py-3 text-base md:inline-flex" disabled={isSubmitting || !zones.length || !payments.some((p) => !p.disabled) || (minOrder > 0 && subtotal < minOrder)}>{isSubmitting ? t("checkout.placing") : t("checkout.place")}</button>
         <Link href="/cart" className="block text-center text-xs text-gray-500 hover:text-primary">← Edit cart</Link>
       </aside>
+      <div className="fixed inset-x-0 z-30 border-t bg-white px-4 py-2.5 shadow-pop md:hidden" style={{ bottom: "calc(3.4rem + env(safe-area-inset-bottom))" }}>
+        {error && <p className="mb-1.5 rounded bg-red-50 px-2 py-1 text-xs text-red-700">{error}</p>}
+        <button className="btn-accent flex w-full items-center justify-between px-4 py-3 text-base" disabled={isSubmitting || !zones.length || !payments.some((p) => !p.disabled) || (minOrder > 0 && subtotal < minOrder)}><span>{isSubmitting ? t("checkout.placing") : t("checkout.place")}</span><span>{taka(total)}</span></button>
+      </div>
     </form>
   );
 }

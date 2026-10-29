@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { api } from "@/lib/api";
 import { Empty, ErrorBox, Field, Icon, Modal, PageHeader, PageLoader, Spinner, StatusBadge, Thumb, useList, useToast } from "@/components/admin/ui";
 import { fmtDateTime, taka } from "@/lib/format";
+import { findVariant, hasVariants, variantLabel } from "@/lib/variants";
 import type { Category, Product, StockLog } from "@/lib/types";
 
 type Mode = "add" | "remove" | "set";
@@ -10,16 +11,17 @@ export default function InventoryPage() {
   const toast = useToast();
   const prods = useList<{ items: Product[] }>("/api/products?limit=500"); const cats = useList<Category[]>("/api/categories"); const logs = useList<StockLog[]>("/api/admin/inventory");
   const [q, setQ] = useState(""); const [cat, setCat] = useState(""); const [flt, setFlt] = useState(""); const [tab, setTab] = useState<"stock" | "log">("stock");
-  const [adj, setAdj] = useState<{ p: Product; mode: Mode; qty: string; reason: string } | null>(null); const [busy, setBusy] = useState(false);
+  const [adj, setAdj] = useState<{ p: Product; mode: Mode; qty: string; reason: string; variantId?: string } | null>(null); const [busy, setBusy] = useState(false);
   const items = prods.data?.items ?? [];
+  const stockValue = (p: Product) => (hasVariants(p) ? p.variants!.reduce((n, v) => n + v.stock * v.price, 0) : p.stock * p.price); // variants are valued at their own price
   const catName = (id: string) => cats.data?.find((c) => c.id === id)?.name ?? "—";
-  const sum = useMemo(() => ({ units: items.reduce((n, p) => n + p.stock, 0), value: items.reduce((n, p) => n + p.stock * p.price, 0), low: items.filter((p) => p.stock > 0 && p.stock <= 10).length, out: items.filter((p) => p.stock <= 0).length }), [items]);
+  const sum = useMemo(() => ({ units: items.reduce((n, p) => n + p.stock, 0), value: items.reduce((n, p) => n + stockValue(p), 0), low: items.filter((p) => p.stock > 0 && p.stock <= 10).length, out: items.filter((p) => p.stock <= 0).length }), [items]);
   const list = useMemo(() => items.filter((p) => (!q || `${p.name} ${p.genericName ?? ""}`.toLowerCase().includes(q.toLowerCase())) && (!cat || p.categoryId === cat) && (!flt || (flt === "low" ? p.stock > 0 && p.stock <= 10 : flt === "out" ? p.stock <= 0 : p.stock > 10))).sort((a, b) => a.stock - b.stock), [items, q, cat, flt]);
 
   const apply = async () => {
     if (!adj) return; setBusy(true);
     try {
-      const r = await api<{ product: Product; log: StockLog }>("/api/admin/inventory", { method: "POST", body: { productId: adj.p.id, mode: adj.mode, qty: adj.qty, reason: adj.reason } });
+      const r = await api<{ product: Product; log: StockLog }>("/api/admin/inventory", { method: "POST", body: { productId: adj.p.id, ...(adj.variantId ? { variantId: adj.variantId } : {}), mode: adj.mode, qty: adj.qty, reason: adj.reason } });
       prods.setData((d) => ({ items: d!.items.map((x) => (x.id === r.product.id ? r.product : x)) })); logs.setData((l) => [r.log, ...(l ?? [])]);
       toast(`${r.product.name}: stock is now ${r.product.stock}`); setAdj(null);
     } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
@@ -48,8 +50,8 @@ export default function InventoryPage() {
                 <tr key={p.id} className="hover:bg-gray-50"><td className="td"><div className="flex items-center gap-3"><Thumb src={p.image} emoji={p.emoji} className="h-10 w-10" /><div><p className="max-w-[220px] truncate font-semibold">{p.name}</p><p className="text-xs text-gray-500">{p.unit}</p></div></div></td>
                   <td className="td text-gray-600">{catName(p.categoryId)}</td>
                   <td className="td"><StatusBadge status={p.stock <= 0 ? "out" : p.stock <= 10 ? "low" : "active"} label={p.stock <= 0 ? "Out of stock" : `${p.stock} in stock`} /></td>
-                  <td className="td text-gray-600">{p.sold}</td><td className="td text-gray-600">{taka(p.stock * p.price)}</td>
-                  <td className="td text-right"><button className="btn-outline btn-sm" onClick={() => setAdj({ p, mode: "add", qty: "", reason: "" })}>Update stock</button></td></tr>))}</tbody></table></div>)}
+                  <td className="td text-gray-600">{p.sold}</td><td className="td text-gray-600">{taka(stockValue(p))}</td>
+                  <td className="td text-right"><button className="btn-outline btn-sm" onClick={() => setAdj({ p, mode: "add", qty: "", reason: "", variantId: hasVariants(p) ? p.variants![0].id : undefined })}>Update stock</button></td></tr>))}</tbody></table></div>)}
         </div>
       ) : (
         <div className="card mt-4 overflow-hidden">
@@ -61,7 +63,8 @@ export default function InventoryPage() {
       <Modal open={!!adj} onClose={() => !busy && setAdj(null)} title={adj ? `Update stock · ${adj.p.name}` : ""}
         footer={<><button className="btn-outline" onClick={() => setAdj(null)}>Cancel</button><button className="btn-primary" onClick={apply} disabled={busy || adj?.qty === ""}>{busy && <Spinner className="h-4 w-4" />}Save</button></>}>
         {adj && <div className="space-y-4">
-          <p className="rounded-lg bg-gray-50 p-3 text-sm">Current stock: <b>{adj.p.stock}</b> {adj.p.unit && <span className="text-gray-500">({adj.p.unit} per unit)</span>}</p>
+          {hasVariants(adj.p) && <Field label="Which option?"><select className="input" value={adj.variantId} onChange={(e) => setAdj({ ...adj, variantId: e.target.value })}>{adj.p.variants!.map((v) => <option key={v.id} value={v.id}>{variantLabel(v)} — {v.stock} in stock</option>)}</select></Field>}
+          <p className="rounded-lg bg-gray-50 p-3 text-sm">Current stock: <b>{hasVariants(adj.p) ? (findVariant(adj.p, adj.variantId)?.stock ?? 0) : adj.p.stock}</b> {!hasVariants(adj.p) && adj.p.unit && <span className="text-gray-500">({adj.p.unit} per unit)</span>}{hasVariants(adj.p) && <span className="text-gray-500"> (product total: {adj.p.stock})</span>}</p>
           <div className="flex gap-1 rounded-lg bg-gray-100 p-1 text-sm font-semibold">{modes.map(([m, l]) => <button key={m} onClick={() => setAdj({ ...adj, mode: m })} className={`flex-1 rounded-md px-2 py-1.5 ${adj.mode === m ? "bg-white text-primary shadow-sm" : "text-gray-600"}`}>{l}</button>)}</div>
           <Field label={adj.mode === "set" ? "New stock count" : "Quantity"}><input className="input" type="number" min="0" autoFocus value={adj.qty} onChange={(e) => setAdj({ ...adj, qty: e.target.value })} /></Field>
           <Field label="Reason (optional)"><input className="input" value={adj.reason} onChange={(e) => setAdj({ ...adj, reason: e.target.value })} placeholder="Supplier delivery, damaged, expired, count…" /></Field>

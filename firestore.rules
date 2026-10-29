@@ -45,6 +45,7 @@ service cloud.firestore {
     match /images/{id} { allow read, write: if false; }
     match /admins/{id} { allow read, write: if false; }
     match /audit_logs/{id} { allow read, write: if false; }
+    // Customer Database (CRM): phone numbers, addresses and notes are private — served only by role-checked admin API routes
     match /customers/{id} { allow read, write: if false; }
     match /finance_expenses/{id} { allow read, write: if false; }
     match /finance_incomes/{id} { allow read, write: if false; }
@@ -57,6 +58,9 @@ service cloud.firestore {
     match /finance_payments/{id} { allow read, write: if false; }
     match /finance_accounts/{id} { allow read, write: if false; }
     match /sku_index/{id} { allow read, write: if false; }
+    // WhatsApp / calling settings and message delivery logs: Admin SDK only (API tokens are never stored in Firestore — environment variables only)
+    match /integrations/{id} { allow read, write: if false; }
+    match /message_logs/{id} { allow read, write: if false; }
 
     match /{document=**} {
       allow read, write: if false;

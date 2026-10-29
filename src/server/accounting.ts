@@ -1,3 +1,4 @@
+import { findVariant, hasVariants, variantLabel, withVariantStock } from "@/lib/variants";
 import { createHash } from "crypto";
 import { db, newId } from "./db";
 import { ApiError } from "./http";
@@ -225,7 +226,7 @@ export async function createSupplier(d: { name: string; phone?: string; address?
   return rec;
 }
 
-export async function createPurchase(i: { supplierId: string; invoiceNo?: string; date: string; items: { productId?: string; name?: string; qty: unknown; unitCost: unknown }[]; note?: string; receive?: boolean; by: string }) {
+export async function createPurchase(i: { supplierId: string; invoiceNo?: string; date: string; items: { productId?: string; variantId?: string; name?: string; qty: unknown; unitCost: unknown }[]; note?: string; receive?: boolean; by: string }) {
   const sup = await db.get<Supplier>("suppliers", i.supplierId);
   if (!sup) throw new ApiError(404, "Supplier not found");
   const date = mustDate(i.date, "Purchase date");
@@ -236,9 +237,16 @@ export async function createPurchase(i: { supplierId: string; invoiceNo?: string
     if (!Number.isInteger(qty) || qty < 1 || qty > 1e6) throw new ApiError(400, `Line ${n + 1}: quantity must be a whole number of at least 1`);
     const unitCost = nonNeg(it.unitCost, `Line ${n + 1}: unit cost`);
     let name = (it.name || "").trim();
-    if (it.productId) { const p = await db.get<Product>("products", it.productId); if (!p) throw new ApiError(404, `Line ${n + 1}: product not found`); name = name || p.name; }
+    let variantId: string | undefined;
+    if (it.productId) {
+      const p = await db.get<Product>("products", it.productId); if (!p) throw new ApiError(404, `Line ${n + 1}: product not found`); name = name || p.name;
+      if (hasVariants(p)) { // stock is kept per size / weight / colour, so the line must say which one was bought
+        const v = findVariant(p, it.variantId); if (!v) throw new ApiError(400, `Line ${n + 1}: choose which option of "${p.name}" was bought`);
+        variantId = v.id; name = `${p.name} (${variantLabel(v)})`;
+      }
+    }
     if (!name) throw new ApiError(400, `Line ${n + 1}: product or item name is required`);
-    items.push({ productId: it.productId || undefined, name: name.slice(0, 120), qty, unitCost });
+    items.push({ productId: it.productId || undefined, ...(variantId ? { variantId } : {}), name: name.slice(0, 120), qty, unitCost });
   }
   const invoiceNo = (i.invoiceNo || "").trim().slice(0, 60);
   return withLock(`purchase:${i.supplierId}`, async () => {
@@ -264,8 +272,14 @@ export async function receivePurchase(id: string) {
       const prod = await db.get<Product>("products", it.productId);
       if (!prod) throw new ApiError(409, `Product for "${it.name}" no longer exists`);
       const before = prod.stock, after = before + it.qty;
+      let stockPatch: Partial<Product> = { stock: after };
+      if (hasVariants(prod)) {
+        const w = it.variantId ? withVariantStock(prod, it.variantId, it.qty) : null;
+        if (!w) throw new ApiError(409, `"${it.name}": choose which size / weight / colour this stock belongs to (edit the purchase line), then receive again`);
+        stockPatch = w;
+      }
       const cost = prod.cost !== undefined && before > 0 ? money((before * prod.cost + it.qty * it.unitCost) / after) : it.unitCost;
-      await db.update<Product>("products", prod.id, { stock: after, cost, updatedAt: new Date().toISOString() });
+      await db.update<Product>("products", prod.id, { ...stockPatch, cost, updatedAt: new Date().toISOString() });
       await db.put("stocklogs", { id: markerId, productId: prod.id, productName: prod.name, before, after, change: it.qty, reason: `Purchase ${p.invoiceNo || p.id}`, createdAt: new Date().toISOString() } as StockLog);
     }
     const next: Purchase = { ...p, received: true, receivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };

@@ -67,6 +67,25 @@ export default function CategoriesPage() {
     }
   };
 
+  const ordered = [...(data ?? [])].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+  /** what the home page category strip shows, in this order */
+  const onHome = ordered.filter((c) => c.active && c.kind !== "medicine" && !c.hideOnHome);
+  /** Move one category earlier / later. The new order is saved at once, so the storefront follows the admin's order. */
+  const move = async (c: Category, dir: -1 | 1) => {
+    const i = ordered.findIndex((x) => x.id === c.id); const j = i + dir;
+    if (i < 0 || j < 0 || j >= ordered.length) return;
+    const next = [...ordered]; [next[i], next[j]] = [next[j], next[i]];
+    const before = data;
+    setData(next.map((x, n) => ({ ...x, sortOrder: n + 1 })));
+    try { await api("/api/categories/reorder", { method: "POST", body: { ids: next.map((x) => x.id) } }); }
+    catch (e: any) { setData(before ?? []); toast(e.message, "err"); }
+  };
+  /** Quick on/off without opening the editor. */
+  const quick = async (c: Category, patch: Partial<Category>) => {
+    try { const s = await api<Category>(`/api/categories/${c.id}`, { method: "PUT", body: { ...c, ...patch } }); setData((d) => d!.map((x) => (x.id === s.id ? s : x))); toast("Saved"); }
+    catch (e: any) { toast(e.message, "err"); }
+  };
+
   const del = async (c: Category) => {
     if (!(await confirm(`Delete category "${c.name}"?`))) return;
     try {
@@ -90,13 +109,21 @@ export default function CategoriesPage() {
       ) : !data?.length ? (
         <Empty title="No categories" action={<button className="btn-primary" onClick={() => open()}>Add first</button>} />
       ) : (
+        <>
+        <div className="card mb-4 p-4">
+          <p className="text-sm font-bold">Home page order <span className="font-normal text-gray-500">— exactly what customers see in the category strip, left to right</span></p>
+          {onHome.length ? <ol className="scroll-thin mt-3 flex gap-3 overflow-x-auto pb-1">{onHome.map((c, n) => (
+            <li key={c.id} className="flex w-16 shrink-0 flex-col items-center gap-1 text-center"><Thumb src={c.image} emoji={(c.name || "?").charAt(0).toUpperCase()} className="h-12 w-12 rounded-full text-base font-bold" /><span className="line-clamp-2 text-[11px] leading-tight text-gray-600">{n + 1}. {c.name}</span></li>))}</ol>
+            : <p className="mt-2 text-xs text-amber-700">No category is switched on for the home page.</p>}
+          <p className="mt-2 text-xs text-gray-500">Use the ↑ ↓ buttons on a category to change its position; use “On home page” to show or hide it there.</p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.map((c) => (
+          {ordered.map((c, idx) => (
             <div key={c.id} className="card flex flex-wrap gap-3 p-4">
               <Thumb src={c.image} emoji={(c.name || "?").charAt(0).toUpperCase()} className="h-16 w-16 rounded-full text-xl font-bold" />
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{c.name}</p>
-                <p className="text-xs text-gray-500">Order #{c.sortOrder}</p>
+                <p className="text-xs text-gray-500">Position {idx + 1}</p>
                 <div className="mt-1">
                   <StatusBadge status={c.active ? "active" : "inactive"} label={c.active ? "Visible" : "Hidden"} />
                   {c.kind === "medicine" && <span className="badge ml-1 bg-emerald-100 text-emerald-800">💊 Medicine</span>}
@@ -104,8 +131,14 @@ export default function CategoriesPage() {
                 </div>
               </div>
               <div className="flex flex-col gap-1">
+                <button className="btn-ghost btn-sm" onClick={() => move(c, -1)} disabled={idx === 0} aria-label={`Move ${c.name} earlier`} title="Move earlier">↑</button>
+                <button className="btn-ghost btn-sm" onClick={() => move(c, 1)} disabled={idx === ordered.length - 1} aria-label={`Move ${c.name} later`} title="Move later">↓</button>
                 <button className="btn-ghost btn-sm" onClick={() => open(c)} aria-label="Edit"><Icon name="edit" className="h-4 w-4" /></button>
                 <button className="btn-ghost btn-sm text-red-600" onClick={() => del(c)} aria-label="Delete"><Icon name="trash" className="h-4 w-4" /></button>
+              </div>
+              <div className="flex basis-full flex-wrap gap-x-5 gap-y-2 border-t pt-3">
+                <Toggle checked={c.active} onChange={(v) => quick(c, { active: v })} label="Visible in store" />
+                {c.kind !== "medicine" && <Toggle checked={!c.hideOnHome} onChange={(v) => quick(c, { hideOnHome: !v })} label="On home page" />}
               </div>
               <button type="button" onClick={() => open(c)} className="relative h-20 w-full basis-full overflow-hidden rounded-lg border border-dashed bg-gray-50 text-xs font-semibold text-gray-500 hover:border-primary hover:text-primary" aria-label={`Cover image for ${c.name}`}>
                 {c.coverImage ? (
@@ -116,6 +149,7 @@ export default function CategoriesPage() {
             </div>
           ))}
         </div>
+        </>
       )}
       <Modal
         open={!!edit}

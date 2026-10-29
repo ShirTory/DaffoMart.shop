@@ -9,7 +9,7 @@ export const GET = handle(async () => { await requireFinance(); const [d, v] = a
 
 const schema = z.object({
   supplierId: z.string().min(1).max(60), invoiceNo: z.string().trim().max(60).optional(), date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  items: z.array(z.object({ productId: z.string().max(60).optional(), name: z.string().trim().max(120).optional(), qty: z.coerce.number(), unitCost: z.coerce.number().min(0) })).min(1).max(100),
+  items: z.array(z.object({ productId: z.string().max(60).optional(), variantId: z.string().max(40).optional(), name: z.string().trim().max(120).optional(), qty: z.coerce.number(), unitCost: z.coerce.number().min(0) })).min(1).max(100),
   note: z.string().max(300).optional(), receive: z.boolean().default(true),
   paidNow: z.coerce.number().min(0).default(0), method: z.string().trim().max(30).default("cash"), reference: z.string().trim().max(80).default(""),
 });

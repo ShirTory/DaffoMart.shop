@@ -9,8 +9,18 @@ export interface Category {
   kind?: CategoryKind; active: boolean; sortOrder: number;
 }
 
+/** One purchasable size / weight / colour combination of a product, with its own price and stock (see lib/variants.ts). */
+export interface ProductVariant {
+  id: string; size?: string; weight?: string; color?: string;
+  /** optional colour swatch shown on the storefront (#RRGGBB) */
+  colorHex?: string;
+  price: number; oldPrice?: number; stock: number; sku?: string;
+}
+
 export interface Product {
   id: string; slug: string; name: string; description: string;
+  /** Optional variants. When present, price / oldPrice / stock below are derived from them and the customer must pick one. */
+  variants?: ProductVariant[];
   /** Unique stock-keeping unit. Required for published (active) products. Not the document id. */
   sku?: string;
   /** Average purchase cost per unit, maintained by received purchases. Used for cost of goods sold. */
@@ -20,6 +30,8 @@ export interface Product {
   genericName?: string; manufacturer?: string; prescriptionRequired?: boolean;
   categoryId: string; stock: number; rating: number; sold: number;
   featured: boolean; active: boolean; createdAt: string; updatedAt: string;
+  /** Optional offer window for a discounted product (oldPrice > price). Empty = no time limit. YYYY-MM-DD, end date inclusive. */
+  offerStartsAt?: string; offerEndsAt?: string;
 }
 
 export interface Banner {
@@ -53,6 +65,7 @@ export type HomeSectionId =
   | "fresh"
   | "household"
   | "offers"
+  | "offerProducts"
   | "sale"
   | "medicine"
   | "new"
@@ -239,6 +252,8 @@ export interface StoreSettings {
   invoice?: InvoiceSettings;
   /** careers: open positions + /join page wording (all editable in admin → Website content) */
   positions?: JobPosition[]; joinTitle?: string; joinIntro?: string;
+  /** Storefront theme / layout (Admin → Website Theme). Public data: never put secrets here. */
+  storeTheme?: StoreThemeSettings;
 }
 export interface PayDisplay { label?: string; hint?: string; logo?: string; color?: string; order?: number; visible?: boolean }
 export interface InvoiceSettings {
@@ -303,7 +318,7 @@ export interface PaymentOption { id: PaymentMethod; label: string; hint: string;
 /** Admin-managed extra payment methods (Rocket, Upay, bank transfer, etc.). */
 export interface CustomPaymentMethod { id: string; label: string; hint: string; number?: string; icon?: string; active: boolean; sortOrder: number; requireTrx: boolean; createdAt: string }
 
-export interface OrderItem { /** unit cost at the time of sale (only when the product had a cost) */ cost?: number; id: string; name: string; unit: string; price: number; qty: number; image?: string; emoji?: string }
+export interface OrderItem { /** unit cost at the time of sale (only when the product had a cost) */ cost?: number; /** chosen variant (size / weight / colour); `unit` then holds its label */ variantId?: string; variantLabel?: string; id: string; name: string; unit: string; price: number; qty: number; image?: string; emoji?: string }
 export interface Order {
   id: string; orderNo: string; name: string; phone: string; address: string; zone: string; zoneName?: string;
   riderId?: string; riderName?: string; riderPhone?: string; hasRx?: boolean;
@@ -312,6 +327,8 @@ export interface Order {
   status: OrderStatus; stockRestored?: boolean; /** set when the order first reaches "delivered"; finance dates revenue by it */ deliveredAt?: string; createdAt: string; updatedAt: string;
   /** courier shipment (outside Dhaka) */
   courierId?: string; courierName?: string; trackingNo?: string; courierUrl?: string; courierAt?: string;
+  /** CRM link: id of the customer record (the normalized phone number). Set automatically when the order is placed. */
+  customerId?: string;
 }
 
 export interface Courier { id: string; name: string; phone: string; /** tracking link template, {tracking} is replaced by the tracking number */ trackingUrl: string; note: string; charge: number; active: boolean; sortOrder: number; createdAt: string }
@@ -338,7 +355,7 @@ export const ATTENDANCE_STATUSES: AttendanceStatus[] = ["present", "late", "half
 export const ATTENDANCE_LABEL: Record<AttendanceStatus, string> = { present: "Present", late: "Late", half: "Half day", leave: "On leave", absent: "Absent", off: "Day off" };
 export interface Attendance { id: string; employeeId: string; date: string; status: AttendanceStatus; checkIn?: string; checkOut?: string; note?: string; updatedAt: string }
 
-export interface CartItem { id: string; slug: string; name: string; price: number; unit: string; emoji: string; image?: string; qty: number; stock?: number; rx?: boolean }
+export interface CartItem { /** chosen variant; the same product with a different variant is a separate cart line */ vid?: string; vlabel?: string; id: string; slug: string; name: string; price: number; unit: string; emoji: string; image?: string; qty: number; stock?: number; rx?: boolean }
 
 
 /* ---------- Finance & Accounts ---------- */
@@ -387,7 +404,7 @@ export interface SalaryTerm { from: string; amount: number }
 export interface RateTerm { from: string; perDelivery: number; commissionPct: number }
 
 export interface Supplier { id: string; name: string; phone: string; address: string; note: string; active: boolean; createdAt: string; updatedAt: string }
-export interface PurchaseItem { productId?: string; name: string; qty: number; unitCost: number }
+export interface PurchaseItem { productId?: string; /** which size / weight / colour was bought (products with options only) */ variantId?: string; name: string; qty: number; unitCost: number }
 export interface Purchase {
   id: string; supplierId: string; supplierName: string; invoiceNo: string; date: string;
   items: PurchaseItem[]; total: number; note: string;
@@ -411,3 +428,74 @@ export interface FinancePayment {
 }
 /** Opening balance of one money account. id = normalized payment method (cash, bkash, bank ...). */
 export interface FinanceAccount { id: string; label: string; openingBalance: number; openingDate: string; updatedBy: string; updatedAt: string }
+
+
+/* ---------- Website theme (additive) ---------- */
+export type ThemePresetId = "fresh" | "minimal" | "bold" | "elegant";
+export type FontKey = "system" | "humanist" | "rounded" | "serif";
+export interface StoreThemeSettings {
+  preset?: ThemePresetId;
+  /** true = use the colours from Admin → Appearance instead of the preset palette (default: only when the admin already chose a colour there) */
+  useCustomColors?: boolean;
+  fontHeading?: FontKey; fontBody?: FontKey; baseSize?: "sm" | "md" | "lg";
+  radius?: "sharp" | "soft" | "round";
+  cardStyle?: "shadow" | "border" | "flat";
+  sectionHeader?: "plain" | "underline" | "pill";
+  pageBg?: string;
+  /** how product rows are laid out on desktop (mobile always scrolls sideways) */
+  productLayout?: "scroll" | "grid";
+  /** hero / cover sizing. Desktop height in px (recommended 180–240). Mobile height only when set; empty keeps the existing mobile cover. */
+  heroDesktopHeight?: number; heroMobileHeight?: number | null; heroFit?: "cover" | "contain";
+  /** category ticker */
+  catStyle?: "circle" | "square" | "pill";
+  catTicker?: boolean; catTickerSpeed?: "slow" | "normal" | "fast";
+  /** dedicated offers carousel */
+  offersSpeed?: "slow" | "normal" | "fast"; offersLimit?: number;
+  /** custom section headings, e.g. { offerProducts: "Today's Deals" } */
+  titles?: Partial<Record<HomeSectionId, string>>;
+}
+
+/* ---------- Customer Database / CRM (additive; collection `customers`, document id = normalized phone) ---------- */
+export type CustomerStatus = "active" | "inactive" | "blocked";
+export type CustomerSegment = "new" | "regular" | "vip" | "inactive";
+export type CustomerSource = "order" | "manual" | "import";
+export interface CustomerFollowUp { id: string; text: string; dueAt?: string; done: boolean; by: string; at: string }
+export interface Customer {
+  /** equals `phone` (01XXXXXXXXX): this is what makes duplicates impossible */
+  id: string; phone: string; name: string;
+  whatsapp?: string; email?: string; address?: string; area?: string; notes?: string;
+  followUps: CustomerFollowUp[];
+  status: CustomerStatus; source: CustomerSource;
+  /** admin-chosen segment; empty = computed automatically */
+  segmentOverride?: CustomerSegment;
+  /** maintained from the customer's orders (cancelled / returned orders are not counted) */
+  orderCount: number; totalSpent: number; firstOrderAt?: string; lastOrderAt?: string;
+  createdAt: string; updatedAt: string;
+}
+
+/* ---------- Integrations (admin-only collection `integrations`; secrets live in environment variables only) ---------- */
+export type WaTemplateKind = "orderPlaced" | "adminNewOrder" | "statusUpdate";
+export interface WaTemplateRef { name: string; language: string; /** order fields mapped to {{1}}, {{2}} … */ params: string[] }
+export interface WhatsAppConfig {
+  id: "whatsapp"; enabled: boolean; provider: "meta_cloud"; phoneNumberId: string; businessAccountId?: string; apiVersion: string;
+  defaultCountryCode: string; adminNotifyNumber: string;
+  notifyAdminOnOrder: boolean; notifyCustomerOnOrder: boolean; notifyCustomerOnStatus: boolean; statusesToNotify: OrderStatus[];
+  /** template = business-initiated (needs templates approved by Meta); text = free text, only deliverable inside the 24 h customer-service window */
+  messageMode: "template" | "text";
+  templates: Record<WaTemplateKind, WaTemplateRef>;
+  textTemplates: Record<WaTemplateKind, string>;
+  updatedAt?: string; updatedBy?: string;
+}
+export interface CallingConfig {
+  id: "calling"; enabled: boolean;
+  /** only "none" is implemented; the others are reserved placeholders for future activation */
+  provider: "none" | "twilio" | "exotel" | "custom";
+  displayNumber: string; callerId: string; hours: string; note: string;
+  updatedAt?: string; updatedBy?: string;
+}
+export type MessageStatus = "queued" | "skipped" | "accepted" | "sent" | "delivered" | "read" | "failed";
+export interface MessageLog {
+  id: string; channel: "whatsapp"; kind: WaTemplateKind | "test"; orderId?: string; orderNo?: string;
+  to: string; status: MessageStatus; providerMessageId?: string; httpStatus?: number; error?: string; reason?: string;
+  createdAt: string; updatedAt: string;
+}

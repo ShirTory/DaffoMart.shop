@@ -20,14 +20,14 @@ export default function PurchasesPage() {
   const [pay, setPay] = useState<Pur | null>(null); const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => { try { setD(await api<Data>("/api/admin/finance/purchases")); setErr(""); } catch (e: any) { setErr(e.message); } }, []);
-  useEffect(() => { load(); api<{ items: any[] }>("/api/products?limit=500").then((r) => setProducts(r.items.map((p) => ({ id: p.id, name: p.name, unit: p.unit })))).catch(() => {}); }, [load]);
+  useEffect(() => { load(); api<{ items: any[] }>("/api/products?limit=500").then((r) => setProducts(r.items.flatMap((p) => (p.variants?.length ? p.variants.map((v: any) => ({ id: `${p.id}~${v.id}`, name: `${p.name} — ${[v.size, v.weight, v.color].filter(Boolean).join(" / ")}`, unit: "" })) : [{ id: p.id, name: p.name, unit: p.unit }])))).catch(() => {}); }, [load]);
 
   const total = lines.reduce((n, l) => n + (Number(l.qty) || 0) * (Number(l.unitCost) || 0), 0);
   const addSupplier = async () => { setBusy(true); try { await api("/api/admin/finance/suppliers", { method: "POST", body: sf }); toast("Supplier added"); setSupModal(false); setSf({ name: "", phone: "" }); load(); } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); } };
   const savePurchase = async () => {
     setBusy(true);
     try {
-      await api("/api/admin/finance/purchases", { method: "POST", body: { supplierId: pf.supplierId, invoiceNo: pf.invoiceNo, date: pf.date, receive: pf.receive, paidNow: Number(pf.paidNow || 0), method: pf.method, items: lines.map((l) => ({ productId: l.productId || undefined, name: l.productId ? undefined : "Other item", qty: Number(l.qty), unitCost: Number(l.unitCost) })) } });
+      await api("/api/admin/finance/purchases", { method: "POST", body: { supplierId: pf.supplierId, invoiceNo: pf.invoiceNo, date: pf.date, receive: pf.receive, paidNow: Number(pf.paidNow || 0), method: pf.method, items: lines.map((l) => ({ productId: l.productId.split("~")[0] || undefined, variantId: l.productId.split("~")[1] || undefined, name: l.productId ? undefined : "Other item", qty: Number(l.qty), unitCost: Number(l.unitCost) })) } });
       toast(pf.receive ? "Purchase saved and stock added" : "Purchase saved"); setPm(false); setLines([{ productId: "", qty: "1", unitCost: "" }]); load();
     } catch (e: any) { toast(e.message, "err"); } finally { setBusy(false); }
   };
@@ -73,7 +73,7 @@ export default function PurchasesPage() {
         <div className="mt-3 space-y-2">
           {lines.map((l, i) => (
             <div key={i} className="grid grid-cols-[1fr_5rem_6rem_2rem] gap-2">
-              <select className="input" value={l.productId} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, productId: e.target.value } : x)))}><option value="">Other item (no stock)</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.unit})</option>)}</select>
+              <select className="input" value={l.productId} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, productId: e.target.value } : x)))}><option value="">Other item (no stock)</option>{products.map((p) => <option key={p.id} value={p.id}>{p.name}{p.unit ? ` (${p.unit})` : ""}</option>)}</select>
               <input className="input" inputMode="numeric" placeholder="Qty" value={l.qty} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} />
               <input className="input" inputMode="decimal" placeholder="Unit cost" value={l.unitCost} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, unitCost: e.target.value } : x)))} />
               <button className="text-red-600" aria-label="Remove line" onClick={() => setLines(lines.length > 1 ? lines.filter((_, j) => j !== i) : lines)}>✕</button>

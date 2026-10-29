@@ -191,13 +191,13 @@ export default function AppearancePage() {
           </div>
         </Sec>
 
-        <Sec title="Footer" desc="Brand banner and what the footer shows.">
-          <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("footerPromoShow")} onChange={tg("footerPromoShow")} label="Show promo banner" /><Toggle checked={on("footerShowPayments")} onChange={tg("footerShowPayments")} label="Show payment methods" /><Toggle checked={on("footerShowCategories")} onChange={tg("footerShowCategories")} label="List categories" /></div>
-          <ImageUpload kind="general" label="Footer promotional image / banner" aspect="aspect-[16/5]" value={f.footerPromoImage} onChange={(v) => set("footerPromoImage", v)} hint="Wide image, e.g. 1600×400. Shown above the footer links." />
+        <Sec title="Footer" desc="Marketing poster and payment icons. The footer also shows shop info and contact details (edit them in Settings).">
+          <div className="flex flex-wrap gap-x-6 gap-y-3"><Toggle checked={on("footerPromoShow")} onChange={tg("footerPromoShow")} label="Show promo banner" /><Toggle checked={on("footerShowPayments")} onChange={tg("footerShowPayments")} label="Show payment methods" /></div>
+          <ImageUpload kind="general" label="Footer promotional image / banner" aspect="aspect-[16/5]" value={f.footerPromoImage} onChange={(v) => set("footerPromoImage", v)} hint="Slim wide poster, e.g. 1600×200. Shown at the top of the footer." />
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Link when clicked (optional)" error={errs.footerPromoLink}><input className="input" value={f.footerPromoLink ?? ""} placeholder="/products?sale=1" onChange={(e) => set("footerPromoLink", e.target.value)} /></Field>
             <Field label="Image description (alt text)"><input className="input" value={f.footerPromoAlt ?? ""} onChange={(e) => set("footerPromoAlt", e.target.value)} /></Field>
-            <Sel label="Banner height" value={f.footerPromoHeight || "md"} onChange={(v) => set("footerPromoHeight", v as never)} opts={[["sm", "Small"], ["md", "Medium"], ["lg", "Large"]]} />
+            <Sel label="Banner height" value={f.footerPromoHeight || "sm"} onChange={(v) => set("footerPromoHeight", v as never)} opts={[["sm", "Small"], ["md", "Medium"], ["lg", "Large"]]} />
             <Sel label="Image fit" value={f.footerPromoFit || "cover"} onChange={(v) => set("footerPromoFit", v)} opts={[["cover", "Fill (crop edges)"], ["contain", "Fit inside"]]} />
             <Color label="Banner background" value={f.footerPromoBg} onChange={sv("footerPromoBg")} fallback="#FFFFFF" />
           </div>

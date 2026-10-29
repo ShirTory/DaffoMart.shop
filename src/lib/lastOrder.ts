@@ -6,7 +6,7 @@ const KEY = "daffomart-last-order";
 export type LastOrderSnap = {
   orderNo: string;
   at: string;
-  items: { id: string; name: string; price: number; unit: string; emoji?: string; image?: string; qty: number }[];
+  items: { id: string; variantId?: string; variantLabel?: string; name: string; price: number; unit: string; emoji?: string; image?: string; qty: number }[];
 };
 
 export function saveLastOrder(orderNo: string, items: OrderItem[]) {
@@ -15,7 +15,7 @@ export function saveLastOrder(orderNo: string, items: OrderItem[]) {
     orderNo,
     at: new Date().toISOString(),
     items: items.map((i) => ({
-      id: i.id, name: i.name, price: i.price, unit: i.unit,
+      id: i.id, ...(i.variantId ? { variantId: i.variantId, variantLabel: i.variantLabel } : {}), name: i.name, price: i.price, unit: i.unit,
       emoji: i.emoji, image: i.image, qty: i.qty,
     })),
   };

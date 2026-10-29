@@ -6,7 +6,9 @@ import { ORDER_STATUSES } from "@/lib/types";
 import { paymentOptions } from "./payments";
 import type { Courier, DeliveryZone, Offer, Order, OrderItem, Product, Rider, StockLog, StoreSettings } from "@/lib/types";
 import type { orderCreateSchema } from "@/lib/validators";
+import { findVariant, hasVariants, variantLabel, variantStockProblem, withVariantStock } from "@/lib/variants";
 import { riderApproved } from "@/lib/rider";
+import { assertCustomerMayOrder, recomputeCustomerStats, recordOrderCustomer } from "./customers";
 import type { z } from "zod";
 
 export async function getSettings(): Promise<StoreSettings> {
@@ -59,20 +61,33 @@ async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise
     const prior = await db.get<Order>("orders", id);
     if (prior) return prior;
   }
+  await assertCustomerMayOrder(input.phone); // an admin can block a customer in the CRM
   const [products, settings, zones] = await Promise.all([db.list<Product>("products"), getSettings(), getZones()]);
   const zone = zones.find((z) => z.id === input.zone);
   if (!zone) throw new ApiError(400, "Please choose a valid delivery area");
   const map = new Map(products.map((p) => [p.id, p]));
-  // merge duplicate lines
-  const qtyById = new Map<string, number>();
-  for (const l of input.items) qtyById.set(l.id, (qtyById.get(l.id) ?? 0) + l.qty);
-
+  // merge duplicate lines (same product AND same variant)
+  const lines = new Map<string, { id: string; variantId?: string; qty: number }>();
+  for (const l of input.items) {
+    const k = `${l.id}~${l.variantId ?? ""}`;
+    const cur = lines.get(k); if (cur) cur.qty += l.qty; else lines.set(k, { id: l.id, variantId: l.variantId || undefined, qty: l.qty });
+  }
+  // stock is checked per variant, but a product's lines may be spread over several variants: total per variant is what counts
   const items: OrderItem[] = [];
-  for (const [id, qty] of qtyById) {
+  for (const { id, variantId, qty } of lines.values()) {
     const p = map.get(id);
     if (!p || !p.active) throw new ApiError(400, "A product in your cart is no longer available. Please review your cart.");
-    if (p.stock < qty) throw new ApiError(409, p.stock <= 0 ? `${p.name} is out of stock` : `Only ${p.stock} of ${p.name} left in stock`);
-    items.push({ id: p.id, name: p.name, unit: p.unit, price: p.price, qty, image: p.image, emoji: p.emoji, ...(p.cost !== undefined ? { cost: p.cost } : {}) }); // cost snapshot feeds cost of goods sold
+    let price = p.price, unit = p.unit, vFields: Pick<OrderItem, "variantId" | "variantLabel"> = {};
+    if (hasVariants(p)) {
+      const problem = variantStockProblem(p, variantId, qty);
+      if (problem) throw new ApiError(!variantId || !findVariant(p, variantId) ? 400 : 409, problem);
+      const v = findVariant(p, variantId)!; // the price ALWAYS comes from the server's copy of the chosen variant, never from the browser
+      price = v.price; unit = variantLabel(v); vFields = { variantId: v.id, variantLabel: variantLabel(v) };
+    } else {
+      if (variantId) throw new ApiError(400, "An option in your cart is no longer available. Please review your cart.");
+      if (p.stock < qty) throw new ApiError(409, p.stock <= 0 ? `${p.name} is out of stock` : `Only ${p.stock} of ${p.name} left in stock`);
+    }
+    items.push({ id: p.id, name: p.name, unit, price, qty, image: p.image, emoji: p.emoji, ...vFields, ...(p.cost !== undefined ? { cost: p.cost } : {}) }); // cost snapshot feeds cost of goods sold
   }
   const subtotal = items.reduce((n, i) => n + i.price * i.qty, 0);
   let discount = 0; let couponCode: string | undefined;
@@ -94,7 +109,7 @@ async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise
   const hasRx = items.some((i) => map.get(i.id)?.prescriptionRequired);
   const now = new Date().toISOString();
   const order: Order = {
-    id, orderNo: orderNo(), name: input.name, phone: input.phone, address: input.address, zone: zone.id, zoneName: zone.name, ...(hasRx ? { hasRx: true } : {}),
+    id, orderNo: orderNo(), customerId: input.phone, name: input.name, phone: input.phone, address: input.address, zone: zone.id, zoneName: zone.name, ...(hasRx ? { hasRx: true } : {}),
     payment: input.payment, ...(["cod","bkash","nagad","online"].includes(input.payment) ? {} : { paymentLabel: opt.label }), paymentStatus: isManual ? "pending" : "unpaid",
     ...(isManual ? { paymentRef: input.paymentRef!.trim().toUpperCase(), paymentFrom: input.paymentFrom } : {}),
     ...(input.lat !== undefined && input.lng !== undefined ? { lat: input.lat, lng: input.lng } : {}), note: input.note ?? "", items, subtotal, delivery, serviceCharge, discount, ...(couponCode ? { couponCode } : {}),
@@ -102,7 +117,9 @@ async function createOrderNow(input: z.infer<typeof orderCreateSchema>): Promise
   };
   // Authoritative stock check + decrement + order write: one atomic step, all or nothing.
   try {
-    const r = await db.placeOrder(order, items.map((i) => ({ id: i.id, qty: i.qty })));
+    const r = await db.placeOrder(order, items.map((i) => ({ id: i.id, qty: i.qty, variantId: i.variantId })));
+    // CRM: save / refresh the customer. The order is already safely stored, so a CRM problem must never fail the checkout.
+    if (!r.duplicate) { try { await recordOrderCustomer(r.order); } catch (e) { console.error("[crm] could not record customer for order", r.order.orderNo, e); } }
     return r.order;
   } catch (e) {
     if (e instanceof StockError) throw new ApiError(e.kind === "unavailable" ? 400 : 409, e.message);
@@ -127,11 +144,16 @@ export async function setOrderStatus(id: string, status: Order["status"]) {
     return next;
   });
   if (!updated) throw new ApiError(404, "Order not found");
+  try { await recomputeCustomerStats(updated.phone); } catch (e) { console.error("[crm] stats refresh failed", e); } // cancelled / returned orders leave the customer's totals
   const move = flow.move;
   if (move) for (const i of updated.items) { // each product is changed atomically too
-    await db.mutate<Product>("products", i.id, (p) => !p ? null : move === "restore"
-      ? { ...p, stock: p.stock + i.qty, sold: Math.max(0, p.sold - i.qty) }
-      : { ...p, stock: Math.max(0, p.stock - i.qty), sold: p.sold + i.qty });
+    await db.mutate<Product>("products", i.id, (p) => {
+      if (!p) return null;
+      const delta = move === "restore" ? i.qty : -i.qty;
+      const sold = move === "restore" ? Math.max(0, p.sold - i.qty) : p.sold + i.qty;
+      if (i.variantId) { const w = withVariantStock(p, i.variantId, delta); return w ? { ...p, ...w, sold } : { ...p, sold }; } // variant gone since: only the sold counter moves
+      return { ...p, stock: Math.max(0, p.stock + delta), sold };
+    });
   }
   return updated;
 }
@@ -170,15 +192,25 @@ export async function assignRider(id: string, riderId: string) {
 }
 
 /* ---------- Inventory ---------- */
-export async function adjustStock(productId: string, mode: "add" | "remove" | "set", qty: number, reason: string) {
+export async function adjustStock(productId: string, mode: "add" | "remove" | "set", qty: number, reason: string, variantId?: string) {
   const at = new Date().toISOString();
-  let before = 0, after = 0, name = "";
+  let before = 0, after = 0, name = "", problem = "";
   const product = await db.mutate<Product>("products", productId, (p) => { // atomic: a customer order in the same instant cannot be lost
+    problem = "";
     if (!p) return null;
-    before = p.stock; name = p.name;
+    name = p.name;
+    if (hasVariants(p)) {
+      const v = findVariant(p, variantId);
+      if (!v) { problem = variantId ? "That variant no longer exists" : "This product has variants: choose which one to adjust"; return null; }
+      before = v.stock; name = `${p.name} (${variantLabel(v)})`;
+      after = Math.max(0, mode === "add" ? v.stock + qty : mode === "remove" ? v.stock - qty : qty);
+      return { ...p, ...withVariantStock(p, v.id, after - before)!, updatedAt: at };
+    }
+    before = p.stock;
     after = Math.max(0, mode === "add" ? p.stock + qty : mode === "remove" ? p.stock - qty : qty);
     return { ...p, stock: after, updatedAt: at };
   });
+  if (problem) throw new ApiError(400, problem);
   if (!product) throw new ApiError(404, "Product not found");
   const log: StockLog = { id: newId(), productId, productName: name, before, after, change: after - before, reason: reason || (mode === "add" ? "Restock" : mode === "remove" ? "Stock removed" : "Stock count"), createdAt: at };
   await db.put("stocklogs", log);

@@ -5,7 +5,7 @@
 param(
   [string]$Repo = "",
   [string]$Branch = "main",
-  [string]$Message = "Fix security leaks, order stock race, add 404/error pages, UI polish"
+  [string]$Message = "Update DaffoMart"
 )
 $ErrorActionPreference = "Stop"
 Set-Location -Path $PSScriptRoot

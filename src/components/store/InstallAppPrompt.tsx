@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { StoreSettings } from "@/lib/types";
 
 const STORAGE_KEY = "daffomart-app-prompt-dismissed";
@@ -40,6 +41,9 @@ export default function InstallAppPrompt({ settings }: { settings: StoreSettings
   // User asked for admin on/off; default false if field missing on existing DB.
   const showConfig = settings.appPromptEnabled === true;
 
+  const path = usePathname();
+  // Conversion focus: never interrupt the cart, checkout or order tracking with the install popup.
+  const quiet = /^\/(cart|checkout|track|pay)/.test(path || "");
   const [visible, setVisible] = useState(false);
   const [iosHelp, setIosHelp] = useState(false);
   const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
@@ -120,7 +124,7 @@ export default function InstallAppPrompt({ settings }: { settings: StoreSettings
     setIosHelp(true);
   };
 
-  if (!showConfig || !visible) return null;
+  if (!showConfig || !visible || quiet) return null;
 
   return (
     <div

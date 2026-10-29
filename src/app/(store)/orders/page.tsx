@@ -9,7 +9,7 @@ import { saveLastOrder } from "@/lib/lastOrder";
 
 interface Row {
   orderNo: string; status: string; createdAt: string; total: number; itemCount: number;
-  items: { id: string; name: string; qty: number; price: number; unit: string; image?: string; emoji?: string }[];
+  items: { id: string; variantId?: string; variantLabel?: string; name: string; qty: number; price: number; unit: string; image?: string; emoji?: string }[];
   riderName?: string; payment?: string; paymentStatus?: string;
 }
 
@@ -34,7 +34,7 @@ export default function MyOrdersPage() {
   const reorder = (row: Row) => {
     saveLastOrder(row.orderNo, row.items as any);
     for (const i of row.items) {
-      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image }, i.qty);
+      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image, ...(i.variantId ? { vid: i.variantId, vlabel: i.variantLabel } : {}) }, i.qty);
     }
     router.push("/cart");
   };

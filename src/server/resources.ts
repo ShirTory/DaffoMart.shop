@@ -1,9 +1,10 @@
 import { collectionRoutes, itemRoutes } from "./crud";
-import { db } from "./db";
+import { db, newId } from "./db";
 import { hashPassword } from "./riderAuth";
 import { ApiError } from "./http";
 import { offerIsLive } from "./services";
 import { slugify } from "@/lib/format";
+import { normaliseVariants, rollup } from "@/lib/variants";
 import type { Attendance, Banner, Category, Courier, CustomPaymentMethod, DeliveryZone, Employee, Offer, Product, Rider } from "@/lib/types";
 import { bannerSchema, categorySchema, courierSchema, employeeSchema, offerSchema, paymentMethodSchema, productSchema, riderSchema, zoneSchema } from "@/lib/validators";
 
@@ -59,8 +60,14 @@ export const productCfg = {
       if (owner) await claimSku(sku, owner);
     }
     if (owner && prev?.sku && prev.sku.toUpperCase() !== sku) await releaseSku(prev.sku, owner);
+    // Size / weight / colour variants: each has its own price and stock; the product's own price ("From"), old price and
+    // total stock are derived from them so the rest of the shop (cards, filters, sorting, SEO) needs no special case.
+    const variants = normaliseVariants(d.variants, newId);
+    const derived = variants.length ? rollup(variants) : null;
     return {
       ...d,
+      ...(derived ? { price: derived.price, oldPrice: derived.oldPrice, stock: derived.stock } : {}),
+      variants: variants.length ? variants : undefined,
       sku,
       cost: prev?.cost, // maintained by purchases; an ordinary product edit must not wipe it
       slug: await uniqueSlug(d.slug || d.name, prev?.id),

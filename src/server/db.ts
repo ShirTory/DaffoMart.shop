@@ -2,27 +2,44 @@ import { randomBytes } from "crypto";
 import { revalidateTag } from "next/cache";
 import fs from "fs";
 import path from "path";
+import { findVariant, hasVariants, variantLabel, withVariantStock } from "@/lib/variants";
+import type { ProductVariant } from "@/lib/types";
 
-export type Col = "products" | "categories" | "banners" | "offers" | "orders" | "settings" | "zones" | "riders" | "stocklogs" | "images" | "nid" | "employees" | "attendance" | "couriers" | "payment_methods" | "ratings" | "issues" | "audit_logs" | "admins" | "customers" | "finance_expenses" | "finance_incomes" | "suppliers" | "purchases" | "payroll" | "finance_payments" | "finance_accounts" | "sku_index";
+export type Col = "products" | "categories" | "banners" | "offers" | "orders" | "settings" | "zones" | "riders" | "stocklogs" | "images" | "nid" | "employees" | "attendance" | "couriers" | "payment_methods" | "ratings" | "issues" | "audit_logs" | "admins" | "customers" | "finance_expenses" | "finance_incomes" | "suppliers" | "purchases" | "payroll" | "finance_payments" | "finance_accounts" | "sku_index" | "integrations" | "message_logs";
 export const newId = () => randomBytes(8).toString("hex");
 
 /** Thrown by `placeOrder` when a product cannot be sold; services.ts turns it into a customer-facing ApiError. */
 export class StockError extends Error {
   constructor(public kind: "unavailable" | "out_of_stock" | "insufficient", message: string, public available = 0) { super(message); this.name = "StockError"; }
 }
-export type OrderLine = { id: string; qty: number };
+export type OrderLine = { id: string; qty: number; variantId?: string };
 
 /**
- * Pure stock check shared by both drivers: given the current product documents, returns the stock updates to apply
- * or throws StockError. Kept free of I/O so the same rule runs inside a Firestore transaction and the local driver.
+ * Pure stock check shared by both drivers: given the current product documents (by id), returns ONE stock update per product
+ * or throws StockError. A product with variants is checked and decremented per variant (several lines of the same product
+ * accumulate); its total `stock` is re-derived. Kept free of I/O so the same rule runs inside a Firestore transaction and the local driver.
  */
-export function planStock(products: (any | undefined)[], lines: OrderLine[], nowIso: string) {
-  return lines.map((l, i) => {
-    const p = products[i];
+export function planStock(products: Map<string, any | undefined>, lines: OrderLine[], nowIso: string) {
+  const ids = [...new Set(lines.map((l) => l.id))];
+  return ids.map((id) => {
+    const p = products.get(id);
     if (!p || !p.active) throw new StockError("unavailable", "A product in your cart is no longer available. Please review your cart.");
+    const mine = lines.filter((l) => l.id === id);
+    const qty = mine.reduce((n, l) => n + l.qty, 0);
+    if (hasVariants(p)) {
+      let cur: { variants?: ProductVariant[]; stock?: number } = { variants: p.variants };
+      for (const l of mine) {
+        const v = findVariant(cur, l.variantId);
+        if (!v) throw new StockError("unavailable", l.variantId ? "An option in your cart is no longer available. Please review your cart." : `Please choose an option for ${p.name}`);
+        const label = `${p.name} (${variantLabel(v)})`;
+        if (v.stock < l.qty) throw new StockError(v.stock <= 0 ? "out_of_stock" : "insufficient", v.stock <= 0 ? `${label} is out of stock` : `Only ${v.stock} of ${label} left in stock`, Math.max(0, v.stock));
+        cur = withVariantStock(cur, l.variantId!, -l.qty)!;
+      }
+      return { id, patch: { variants: cur.variants, stock: cur.stock, sold: (Number(p.sold) || 0) + qty, updatedAt: nowIso } };
+    }
     const stock = Number(p.stock) || 0;
-    if (stock < l.qty) throw new StockError(stock <= 0 ? "out_of_stock" : "insufficient", stock <= 0 ? `${p.name} is out of stock` : `Only ${stock} of ${p.name} left in stock`, stock);
-    return { id: l.id as string, patch: { stock: stock - l.qty, sold: (Number(p.sold) || 0) + l.qty, updatedAt: nowIso } };
+    if (stock < qty) throw new StockError(stock <= 0 ? "out_of_stock" : "insufficient", stock <= 0 ? `${p.name} is out of stock` : `Only ${stock} of ${p.name} left in stock`, stock);
+    return { id, patch: { stock: stock - qty, sold: (Number(p.sold) || 0) + qty, updatedAt: nowIso } };
   });
 }
 
@@ -94,10 +111,11 @@ function firestoreDriver(): Driver {
         const orderRef = firestore.collection("orders").doc(order.id);
         const existing = await tx.get(orderRef);
         if (existing.exists) return { order: { ...existing.data(), id: existing.id }, duplicate: true };
-        const refs = lines.map((l) => firestore.collection("products").doc(l.id));
+        const ids = [...new Set(lines.map((l) => l.id))]; // one read + one update per product, even with several variants of it
+        const refs = ids.map((id) => firestore.collection("products").doc(id));
         const snaps = await tx.getAll(...refs);
-        const plan = planStock(snaps.map((d) => (d.exists ? d.data() : undefined)), lines, new Date().toISOString());
-        plan.forEach((u, i) => tx.update(refs[i], u.patch));
+        const plan = planStock(new Map(ids.map((id, i) => [id, snaps[i].exists ? snaps[i].data() : undefined])), lines, new Date().toISOString());
+        plan.forEach((u) => tx.update(firestore.collection("products").doc(u.id), u.patch));
         tx.set(orderRef, clean);
         return { order: clean, duplicate: false };
       });
@@ -148,7 +166,7 @@ function localDriver(): Driver {
       const c = load();
       const existing = c.orders?.[order.id];
       if (existing) return { order: structuredClone(existing), duplicate: true };
-      const plan = planStock(lines.map((l) => c.products?.[l.id]), lines, new Date().toISOString());
+      const plan = planStock(new Map(lines.map((l) => [l.id, c.products?.[l.id]] as const)), lines, new Date().toISOString());
       for (const u of plan) c.products[u.id] = { ...c.products[u.id], ...u.patch };
       const saved = { ...JSON.parse(JSON.stringify(order)) };
       (c.orders ??= {})[order.id] = saved;

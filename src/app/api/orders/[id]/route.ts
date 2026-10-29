@@ -2,6 +2,8 @@ import { db } from "@/server/db";
 import { requireAdmin } from "@/server/auth";
 import { ApiError, handle, ok, readJson } from "@/server/http";
 import { assignRider, setCourier, setOrderStatus, setPaymentStatus } from "@/server/services";
+import { notifyOrderStatus } from "@/server/integrations/whatsapp";
+import { runAfterResponse } from "@/server/after";
 import { orderPatchSchema } from "@/lib/validators";
 import type { Order } from "@/lib/types";
 export const dynamic = "force-dynamic";
@@ -17,7 +19,7 @@ export const PATCH = handle(async (req, ctx) => {
   let o: Order | null = null;
   if (riderId !== undefined) o = await assignRider(id, riderId);
   if (courierId !== undefined || trackingNo !== undefined) o = await setCourier(id, courierId, trackingNo);
-  if (status !== undefined) o = await setOrderStatus(id, status);
+  if (status !== undefined) { o = await setOrderStatus(id, status); const sent = o; runAfterResponse(() => notifyOrderStatus(sent)); }
   if (paymentStatus !== undefined) o = await setPaymentStatus(id, paymentStatus);
   return ok(o);
 });

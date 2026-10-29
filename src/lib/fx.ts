@@ -35,9 +35,9 @@ export const parseEmojis = (v: string) => (v || "").split(/[\s,]+/).filter(Boole
 /** Seconds -> clamp, speed word -> duration multiplier (bigger = slower) */
 export const SPEED_MULT: Record<FxSettings["speed"], number> = { slow: 1.6, normal: 1, fast: 0.65 };
 
-/** Home banner height: wide on desktop, always capped on phones so it never pushes products off the first screen. Shared by the built-in banner and cover slides. */
+/** Home banner height: compact on desktop (default 220px, set in Admin → Website Theme), always capped on phones so it never pushes products off the first screen. Shared by the built-in banner and cover slides. See .hero-box in globals.css. */
 export const HERO_HEIGHT: Record<HeroBannerSettings["height"], string> = {
-  sm: "aspect-[21/9] max-h-[120px] sm:aspect-[16/4] sm:max-h-none",
-  md: "aspect-[21/9] max-h-[140px] sm:aspect-[16/5] sm:max-h-none",
-  lg: "aspect-[16/9] max-h-[190px] sm:aspect-[16/6] sm:max-h-none",
+  sm: "hero-box hero-sm",
+  md: "hero-box",
+  lg: "hero-box hero-lg",
 };

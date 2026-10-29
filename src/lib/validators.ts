@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normPhone } from "./format";
+import { duplicateVariant } from "./variants";
 
 const url = z.string().max(1000).refine((v) => v === "" || (v.startsWith("/") && !v.startsWith("//") && !v.startsWith("/\\")) || /^https?:\/\//.test(v), "Must be a valid URL or path");
 const colorRe = /^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6})?$/;
@@ -11,6 +12,17 @@ const btnLook = z.object({
   anim: z.enum(["none", "lift", "pulse", "shine", "bounce", "glow"]), shadow: z.enum(["none", "soft", "strong"]), uppercase: z.boolean(),
 }).partial().optional();
 const optionalDate = z.string().optional().transform((v) => (v ? v : undefined));
+
+const optText = (max: number) => z.string().trim().max(max).optional().transform((v) => v || undefined);
+export const variantSchema = z.object({
+  id: z.string().trim().max(40).optional().transform((v) => v || undefined),
+  size: optText(30), weight: optText(30), color: optText(30),
+  colorHex: color.transform((v) => v || undefined),
+  price: z.coerce.number().min(0, "Variant price must be 0 or more"),
+  oldPrice: z.coerce.number().min(0).optional().transform((v) => (v ? v : undefined)),
+  stock: z.coerce.number().int().min(0, "Variant stock must be 0 or more").max(1_000_000).default(0),
+  sku: z.string().trim().max(64).regex(/^[A-Z0-9_-]*$/i, "Variant SKU: letters, numbers, - and _ only").optional().transform((v) => (v ? v.toUpperCase() : undefined)),
+}).refine((v) => Boolean(v.size || v.weight || v.color), { message: "Fill at least one of Size, Weight or Colour", path: ["size"] });
 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Name is required").max(120),
@@ -32,7 +44,17 @@ export const productSchema = z.object({
   rating: z.coerce.number().min(0).max(5).default(0),
   featured: z.boolean().default(false),
   active: z.boolean().default(true),
+  /** optional offer window (YYYY-MM-DD, end inclusive); empty = no time limit */
+  offerStartsAt: z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/, "Use a date like 2026-11-30").optional().transform((v) => v || undefined),
+  offerEndsAt: z.string().trim().regex(/^(\d{4}-\d{2}-\d{2})?$/, "Use a date like 2026-11-30").optional().transform((v) => v || undefined),
+  /** optional size / weight / colour options, each with its own price and stock; max 40 per product */
+  variants: z.array(variantSchema).max(40, "A product can have at most 40 variants").default([]),
 }).superRefine((data, ctx) => {
+  const dup = duplicateVariant(data.variants);
+  if (dup) ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Variant ${dup}`, path: ["variants"] });
+  if (data.offerStartsAt && data.offerEndsAt && data.offerEndsAt < data.offerStartsAt) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Offer end date is before the start date", path: ["offerEndsAt"] });
+  }
   if (data.active && !data.sku) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "SKU is required for published products", path: ["sku"] });
   }
@@ -209,8 +231,18 @@ export const settingsSchema = z.object({
     transition: z.enum(["slide", "fade"]), showArrows: z.boolean(), showDots: z.boolean(), rounded: z.boolean(),
   }).partial().optional(),
   customerNidEnabled: z.boolean().optional(),
+  storeTheme: z.object({
+    preset: z.enum(["fresh", "minimal", "bold", "elegant"]), useCustomColors: z.boolean(),
+    fontHeading: z.enum(["system", "humanist", "rounded", "serif"]), fontBody: z.enum(["system", "humanist", "rounded", "serif"]), baseSize: z.enum(["sm", "md", "lg"]),
+    radius: z.enum(["sharp", "soft", "round"]), cardStyle: z.enum(["shadow", "border", "flat"]), sectionHeader: z.enum(["plain", "underline", "pill"]),
+    pageBg: color, productLayout: z.enum(["scroll", "grid"]),
+    heroDesktopHeight: z.coerce.number().int().min(120).max(400), heroMobileHeight: z.coerce.number().int().min(80).max(320).nullable(), heroFit: z.enum(["cover", "contain"]),
+    catStyle: z.enum(["circle", "square", "pill"]), catTicker: z.boolean(), catTickerSpeed: z.enum(["slow", "normal", "fast"]),
+    offersSpeed: z.enum(["slow", "normal", "fast"]), offersLimit: z.coerce.number().int().min(3).max(40),
+    titles: z.record(z.string().trim().max(80)),
+  }).partial().optional(),
   homeSections: z.array(z.object({
-    id: z.enum(["hero","features","categories","best","daily","fresh","household","offers","sale","medicine","new","buyAgain"]),
+    id: z.enum(["hero","features","categories","best","daily","fresh","household","offers","offerProducts","sale","medicine","new","buyAgain"]),
     visible: z.boolean(),
   })).max(20).optional(),
   homeDailyCatIds: z.array(z.string().min(1).max(40)).max(20).optional(),
@@ -248,6 +280,8 @@ export const riderSchema = z.object({
 
 export const inventorySchema = z.object({
   productId: z.string().min(1),
+  /** required when the product has variants: which size / weight / colour to adjust */
+  variantId: z.string().trim().max(40).optional(),
   mode: z.enum(["add", "remove", "set"]),
   qty: z.coerce.number().int().min(0, "Quantity must be 0 or more").max(1_000_000),
   reason: z.string().trim().max(80).default(""),
@@ -267,7 +301,7 @@ export const orderCreateSchema = z.object({
   couponCode: z.string().trim().toUpperCase().max(24).optional(),
   /** client-generated random key for one checkout attempt; makes retries and double-taps idempotent */
   idempotencyKey: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/, "Invalid request key").optional(),
-  items: z.array(z.object({ id: z.string().min(1), qty: z.coerce.number().int().min(1).max(100) })).min(1, "Your cart is empty").max(60),
+  items: z.array(z.object({ id: z.string().min(1), variantId: z.string().trim().max(40).optional(), qty: z.coerce.number().int().min(1).max(100) })).min(1, "Your cart is empty").max(60),
 });
 
 export const orderPatchSchema = z.object({

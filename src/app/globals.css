@@ -109,6 +109,37 @@ img { image-rendering: auto; }
 [data-fx-shine="off"] .deal-badge::after { display: none; }
 [data-fx-float="off"] :is(.hero-float, .hero-blob) { animation: none !important; }
 
+/* ---- Website themes (additive; set from Admin → Website Theme, see lib/storeTheme.ts) ---- */
+.store-root { font-family: var(--font-body, inherit); background: var(--page-bg, #f9fafb); font-size: var(--base-size, 16px); min-height: 100vh; overflow-x: clip; }
+.store-root :is(h1, h2, h3) { font-family: var(--font-heading, inherit); }
+.store-root [data-card], .store-root .rounded-2xl { transition: border-radius .2s; }
+[data-radius="sharp"] :is(.rounded-2xl, .rounded-xl, .rounded-lg) { border-radius: 3px; }
+[data-radius="round"] .rounded-2xl { border-radius: 1.5rem; }
+[data-radius="round"] .rounded-xl { border-radius: 1.1rem; }
+[data-cards="border"] .shadow-sm, [data-cards="border"] .shadow-card { box-shadow: none; border-color: rgb(209 213 219 / .8); }
+[data-cards="flat"] :is(.shadow-sm, .shadow-card) { box-shadow: none; border-color: transparent; background: rgb(255 255 255 / .7); }
+.sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: .75rem; margin-bottom: .75rem; }
+[data-sechead="underline"] .sec-title { border-bottom: 3px solid rgb(var(--c-accent)); padding-bottom: .2rem; }
+[data-sechead="pill"] .sec-title { background: rgb(var(--c-primary)); color: #fff; padding: .25rem .9rem; border-radius: 9999px; }
+
+/* Hero / cover. Mobile size is the original (21:9, max 140px) unless the admin sets a mobile height; desktop height comes from the theme. */
+.hero-box { position: relative; width: 100%; aspect-ratio: 21 / 9; max-height: var(--hero-h-mobile, 140px); }
+@media (min-width: 640px) { .hero-box { aspect-ratio: auto; max-height: none; height: var(--hero-h-desktop, 220px); } }
+[data-hero-fit="contain"] .hero-img { object-fit: contain; background: rgb(var(--c-primary-soft)); }
+
+/* Auto-moving tickers (category strip + offers carousel). Direction: left -> right. CSS only; paused by hover, focus, or the Pause button. */
+.ticker { position: relative; overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+.ticker-track { display: flex; width: max-content; animation: ticker-ltr var(--ticker-dur, 40s) linear infinite; will-change: transform; }
+.ticker-set { display: flex; flex-shrink: 0; }
+.ticker[data-paused="true"] .ticker-track, .ticker:hover .ticker-track, .ticker:focus-within .ticker-track { animation-play-state: paused; }
+@keyframes ticker-ltr { from { transform: translate3d(-50%, 0, 0); } to { transform: translate3d(0, 0, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .ticker { -webkit-mask-image: none; mask-image: none; }
+  .ticker-track { animation: none !important; width: auto; flex-wrap: wrap; }
+  .ticker-set[data-clone="true"] { display: none; }
+  .ticker-set { flex-wrap: wrap; }
+}
+
 /* ================= Storefront polish v3 ================= */
 body { background: rgb(var(--c-page, 246 247 251)); }
 .page-w { max-width: var(--page-max, 80rem); }
@@ -166,3 +197,11 @@ body { background: rgb(var(--c-page, 246 247 251)); }
 .cat-card { transition: transform .2s cubic-bezier(.22, .8, .3, 1), box-shadow .2s ease, border-color .2s ease; -webkit-tap-highlight-color: transparent; }
 .cat-card:active { transform: scale(.96); }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) { .cat-card:hover { transform: translateY(-3px); box-shadow: 0 12px 22px -10px rgba(16, 24, 40, .28); } }
+
+/* Cover heights: sm / md / lg scale the theme's desktop height (Admin → Website Theme → Hero / cover size). */
+.hero-box.hero-sm { max-height: var(--hero-h-mobile, 120px); }
+.hero-box.hero-lg { aspect-ratio: 16 / 9; max-height: var(--hero-h-mobile, 190px); }
+@media (min-width: 640px) {
+  .hero-box.hero-sm { max-height: none; height: calc(var(--hero-h-desktop, 220px) * .82); }
+  .hero-box.hero-lg { aspect-ratio: auto; max-height: none; height: calc(var(--hero-h-desktop, 220px) * 1.2); }
+}

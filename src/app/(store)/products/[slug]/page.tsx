@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import AddToCart from "@/components/store/AddToCart";
 import Gallery from "@/components/store/Gallery";
+import VariantBuyBox from "@/components/store/VariantBuyBox";
+import { hasVariants, priceRange } from "@/lib/variants";
 import ProductCard from "@/components/store/ProductCard";
 import { getActiveProducts, getCategories } from "@/server/queries";
 import { discountPct, taka } from "@/lib/format";
@@ -24,11 +26,14 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
   const related = all.filter((x) => x.categoryId === p.categoryId && x.id !== p.id).slice(0, 5);
   const cat = categories.find((c) => c.id === p.categoryId); const off = discountPct(p.price, p.oldPrice);
   const images = p.images?.length ? p.images : p.image ? [p.image] : [];
+  const vr = hasVariants(p);
   const abs = (u: string) => (u.startsWith("http") ? u : `${SITE_URL}${u}`);
   const ld = {
     "@context": "https://schema.org", "@type": "Product", name: p.name, ...(p.description ? { description: p.description } : {}),
     ...(images.length ? { image: images.map(abs) } : {}), ...(p.manufacturer ? { brand: { "@type": "Brand", name: p.manufacturer } } : {}),
-    offers: { "@type": "Offer", url: `${SITE_URL}/products/${p.slug}`, priceCurrency: "BDT", price: p.price, availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" },
+    offers: vr
+      ? { "@type": "AggregateOffer", url: `${SITE_URL}/products/${p.slug}`, priceCurrency: "BDT", lowPrice: priceRange(p.variants!).min, highPrice: priceRange(p.variants!).max, offerCount: p.variants!.length, availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" }
+      : { "@type": "Offer", url: `${SITE_URL}/products/${p.slug}`, priceCurrency: "BDT", price: p.price, availability: p.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock" },
   };
   return (
     <>
@@ -37,14 +42,13 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       <div className="grid gap-8 rounded-2xl border bg-white p-5 shadow-card md:grid-cols-2 md:p-8">
         <Gallery images={images} emoji={p.emoji} name={p.name} />
         <div className="space-y-4">
-          {cat && <p className="text-sm font-medium text-primary">{cat.name}</p>}
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{p.name}</h1>
-          <p className="text-sm text-gray-500">{p.rating > 0 && <>⭐ {p.rating.toFixed(1)} · </>}{p.sold > 0 && <>{p.sold}+ sold · </>}{p.unit}</p>
-          <div className="flex items-baseline gap-3"><span className="text-4xl font-extrabold text-primary">{taka(p.price)}</span>{p.oldPrice ? <span className="text-lg text-gray-400 line-through">{taka(p.oldPrice)}</span> : null}{off > 0 && <span className="rounded-full bg-accent px-2.5 py-0.5 text-sm font-bold text-white">Save {off}%</span>}</div>
+          {vr ? <VariantBuyBox product={p} /> : <>
+          <div className="flex flex-wrap items-baseline gap-3"><span className="text-4xl font-extrabold text-primary">{taka(p.price)}</span>{p.oldPrice && p.oldPrice > p.price ? <span className="text-lg text-gray-400 line-through">{taka(p.oldPrice)}</span> : null}{off > 0 && <span className="rounded-full bg-accent px-2.5 py-0.5 text-sm font-bold text-white">Save {off}%</span>}</div>
+          <div><p className="label">Pack size</p><span className="inline-flex rounded-full border-2 border-primary bg-primary-soft px-4 py-1.5 text-sm font-semibold text-primary">{p.unit}</span></div>
           <p className={`text-sm font-medium ${p.stock > 0 ? "text-emerald-600" : "text-red-600"}`}>{p.stock <= 0 ? "Out of stock" : p.stock <= 10 ? `Only ${p.stock} left in stock` : "In stock"}</p>
-          {p.description && <p className="whitespace-pre-line text-sm leading-relaxed text-gray-600">{p.description}</p>}
-          <div className="max-w-sm pt-2"><AddToCart product={p} withQty /></div>
-          <ul className="grid gap-2 border-t pt-4 text-sm text-gray-600 sm:grid-cols-2"><li>🚚 Fast home delivery</li><li>💵 Cash on delivery</li><li>🌿 Quality checked</li><li>↩️ Easy support</li></ul>
+          <div className="max-w-sm pt-1"><AddToCart product={p} withQty showBuyNow /></div></>}
+          {p.description && <details className="border-t pt-3 text-sm text-gray-600"><summary className="cursor-pointer font-semibold text-gray-800">Product details</summary><p className="mt-2 whitespace-pre-line leading-relaxed">{p.description}</p></details>}
         </div>
       </div>
       {related.length > 0 && <section className="mt-10"><h2 className="mb-4 text-xl font-bold">You may also like</h2><div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 xl:grid-cols-5">{related.map((r) => <ProductCard key={r.id} p={r} />)}</div></section>}

@@ -71,7 +71,7 @@ export default function TrackForm() {
     if (!o?.items?.length) return;
     saveLastOrder(o.orderNo, o.items);
     for (const i of o.items) {
-      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image }, i.qty);
+      add({ id: i.id, slug: i.id, name: i.name, price: i.price, unit: i.unit, emoji: i.emoji || "🛒", image: i.image, ...(i.variantId ? { vid: i.variantId, vlabel: i.variantLabel } : {}) }, i.qty);
     }
     router.push("/cart");
   };
