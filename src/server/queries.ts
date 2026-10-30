@@ -17,3 +17,9 @@ export const getActiveProducts = cached(async () => (await db.list<Product>("pro
 export const getSettings = cached(liveSettings, "settings");
 export const getZones = cached(liveZones, "zones");
 export const isMedicineCat = (c?: Category) => c?.kind === "medicine";
+
+/** Every layout document (the global one + product overrides). Tiny; cached like the rest of the storefront data. */
+export const getLayoutDocs = cached(async () => db.list<import("./productPage").LayoutDoc>("product_layouts"), "layouts");
+
+/** Admin SEO overrides keyed by page id (see SeoEntry). Cached like the rest of the storefront and cleared the moment the admin saves. */
+export const getSeoMap = cached(async () => Object.fromEntries((await db.list<import("@/lib/types").SeoEntry>("seo_overrides")).map((e) => [e.id, e])) as Record<string, import("@/lib/types").SeoEntry>, "seo");

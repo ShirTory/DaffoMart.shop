@@ -13,6 +13,7 @@ import { RxBadge } from "./MedicineBadge";
 import WishlistButton from "./WishlistButton";
 import { useFlags, useT } from "./TextsProvider";
 import DealBadge from "./DealBadge";
+import { ratingText } from "@/lib/productPage";
 import type { DealInfo } from "@/lib/deals";
 
 const optimizable = (src: string) => src.startsWith("/api/uploads/") || src.startsWith("https://firebasestorage.googleapis.com/");
@@ -75,6 +76,7 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
           <span className="m-1.5 rounded-full bg-gradient-to-r from-red-500 to-orange-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-sm">{off}% {t("card.off")}</span>
         )}
         {out && lr.showOutOfStock && <span className="rounded-br-lg bg-gray-700 px-2 py-0.5 text-[10px] font-bold text-white">Out of Stock</span>}
+        {p.badges?.slice(0, 2).map((b) => <span key={b} className="m-1.5 mt-0 rounded-full bg-white/95 px-2 py-0.5 text-[10px] font-bold text-primary shadow-sm ring-1 ring-primary/20">{b}</span>)}
       </div>
       <WishlistButton
         item={{ id: p.id, slug: p.slug, name: p.name, price: p.price, unit: p.unit, emoji: p.emoji, image: p.image }}
@@ -96,12 +98,13 @@ export default function ProductCard({ p, whatsapp, deal, dealDelay = 0 }: { p: P
           {p.name}
         </Link>
         {p.genericName && <p className="line-clamp-1 text-[11px] text-gray-500">{p.genericName}</p>}
-        {(p.prescriptionRequired || (!out && p.stock <= 5)) && (
-          <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
-            {p.prescriptionRequired && <RxBadge />}
-            {!out && p.stock <= 5 && <span className="font-semibold text-amber-600">Only {p.stock} left</span>}
-          </p>
+        {ratingText(p.rating, p.reviewCount) && (
+          <p className="mt-1 flex items-center gap-1 text-[11px] text-gray-600" aria-label={`Rated ${ratingText(p.rating, p.reviewCount)} out of 5 from ${p.reviewCount} reviews`}><span className="text-amber-400" aria-hidden>★</span><span className="font-semibold">{ratingText(p.rating, p.reviewCount)}</span><span className="text-gray-400">({p.reviewCount})</span></p>
         )}
+        <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+          {p.prescriptionRequired && <RxBadge />}
+          {out ? <span className="font-semibold text-gray-500">Out of stock</span> : p.stock <= 5 ? <span className="font-semibold text-amber-600">Only {p.stock} left</span> : <span className="font-medium text-emerald-600">In stock</span>}
+        </p>
         <div className="mt-auto pt-2">
           <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0">
             {vr && priceRange(p.variants!).min < priceRange(p.variants!).max && <span className="text-[10px] font-medium text-gray-500">From</span>}

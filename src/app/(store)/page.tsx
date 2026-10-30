@@ -15,10 +15,10 @@ import { resolveTheme, TICKER_SECONDS_PER_ITEM } from "@/lib/storeTheme";
 import { validHex } from "@/lib/theme";
 import { dealInfo, dealKindForOffer, dealKindForProduct } from "@/lib/deals";
 import { parseEmojis, resolveDeals, resolveFx, resolveHero } from "@/lib/fx";
-import { getActiveProducts, getBanners, getCategories, getOffers, getSettings } from "@/server/queries";
+import { getActiveProducts, getBanners, getCategories, getOffers, getSeoMap, getSettings } from "@/server/queries";
 import { discountPct, taka } from "@/lib/format";
 import { makeT } from "@/lib/texts";
-import { pageMeta } from "@/lib/seo";
+import { pageMeta, withSeo } from "@/lib/seo";
 import type { Metadata } from "next";
 import type { Category, HomeSectionConfig, HomeSectionId, Product } from "@/lib/types";
 
@@ -104,9 +104,9 @@ function resolveSections(cfg?: HomeSectionConfig[]): HomeSectionConfig[] {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getSettings();
+  const [s, seo] = await Promise.all([getSettings(), getSeoMap()]);
   const title = s.seoTitle || `${s.storeName} – ${s.tagline}`;
-  return { ...pageMeta({ title, description: s.seoDescription || undefined, path: "/", image: s.ogImage || undefined }), title: { absolute: title } };
+  return pageMeta({ ...withSeo({ title, description: s.seoDescription || undefined, path: "/", image: s.ogImage || undefined }, seo.home), absoluteTitle: true });
 }
 
 export default async function Home() {

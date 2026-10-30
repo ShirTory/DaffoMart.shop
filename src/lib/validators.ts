@@ -464,3 +464,17 @@ export const employeeReviewSchema = z.discriminatedUnion("action", [
 ]);
 
 export const employeeLoginSchema = z.object({ phone: z.string().trim().min(5).max(20), password: z.string().min(1).max(60) });
+
+/* ---------------- product page content (Admin → Product Content) ---------------- */
+const clean = (max: number) => z.string().trim().max(max).optional().transform((v) => v || undefined);
+export const productContentSchema = z.object({
+  brand: clean(80), countryOfOrigin: clean(60), manufacturer: clean(120), manufacturerInfo: clean(1200),
+  descSections: z.array(z.object({ id: z.string().max(40).optional(), title: z.string().trim().max(80).default(""), body: z.string().trim().max(3000) })).max(12).default([]),
+  specs: z.array(z.object({ id: z.string().max(40).optional(), label: z.string().trim().max(60), value: z.string().trim().max(200) })).max(40).default([]),
+  video: z.object({ kind: z.enum(["upload", "external"]), url: z.string().trim().max(600), poster: url.optional().transform((v) => v || undefined), title: clean(100), enabled: z.boolean().default(true) }).nullable().default(null),
+  extraImages: z.array(url).max(12).default([]),
+  badges: z.array(z.string().trim().min(1).max(24)).max(3).default([]),
+  sameCategoryIds: z.array(z.string().trim().min(1).max(40)).max(24).default([]),
+  recommendedIds: z.array(z.string().trim().min(1).max(40)).max(24).default([]),
+});
+export type ProductContentInput = z.infer<typeof productContentSchema>;

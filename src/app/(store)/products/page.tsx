@@ -3,21 +3,25 @@ import Link from "next/link";
 import ProductCard from "@/components/store/ProductCard";
 import EmptyState from "@/components/store/EmptyState";
 import FilterLayout from "@/components/store/FilterLayout";
-import { getActiveProducts, getCategories, getSettings } from "@/server/queries";
+import { getActiveProducts, getCategories, getSeoMap, getSettings } from "@/server/queries";
 import { makeT } from "@/lib/texts";
 import { validHex } from "@/lib/theme";
-import { pageMeta } from "@/lib/seo";
+import { pageMeta, seoKeys, withSeo } from "@/lib/seo";
 const PER = 24;
 
 type SP = { q?: string; cat?: string; sort?: string; max?: string; sale?: string; featured?: string; page?: string };
 
 export async function generateMetadata({ searchParams }: { searchParams: Promise<SP> }): Promise<Metadata> {
-  const sp = await searchParams; const [categories, st] = await Promise.all([getCategories(), getSettings()]);
+  const sp = await searchParams; const [categories, st, seo] = await Promise.all([getCategories(), getSettings(), getSeoMap()]);
   const c = sp.cat ? categories.find((x) => x.id === sp.cat) : undefined;
   const filtered = Boolean(sp.q || sp.sort || sp.max || sp.sale || sp.featured || sp.page);
   const title = c ? (c.coverTitle || c.name) : sp.sale ? makeT(st.texts)("products.sale") : sp.featured ? makeT(st.texts)("products.featured") : makeT(st.texts)("products.all");
   const desc = c?.description || `Shop ${c ? c.name : "groceries, medicines and everyday essentials"} at ${st.storeName}.`;
-  return pageMeta({ title, description: desc, path: c && !filtered ? `/products?cat=${c.id}` : "/products", image: c?.coverImage || c?.image, noindex: filtered });
+  // admin SEO: a category has its own entry, the "sale" view is the Offers page, everything else the Products page; filtered/sorted/paged views stay noindex whatever the entry says
+  const entry = c ? seo[seoKeys.category(c.id)] : sp.sale ? seo.offers : seo.products;
+  const base = { title, description: desc, path: c && !filtered ? `/products?cat=${c.id}` : sp.sale && !sp.q && !sp.sort && !sp.max && !sp.featured && !sp.page ? "/products?sale=1" : "/products", image: c?.coverImage || c?.image, noindex: filtered && !(sp.sale && !sp.q && !sp.sort && !sp.max && !sp.featured && !sp.page) };
+  const m = withSeo(base, entry);
+  return pageMeta({ ...m, noindex: base.noindex || m.noindex });
 }
 
 const OVERLAY: Record<string, string> = {

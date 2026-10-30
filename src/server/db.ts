@@ -5,7 +5,7 @@ import path from "path";
 import { findVariant, hasVariants, variantLabel, withVariantStock } from "@/lib/variants";
 import type { ProductVariant } from "@/lib/types";
 
-export type Col = "products" | "categories" | "banners" | "offers" | "orders" | "settings" | "zones" | "riders" | "stocklogs" | "images" | "nid" | "employees" | "attendance" | "couriers" | "payment_methods" | "ratings" | "issues" | "audit_logs" | "admins" | "customers" | "finance_expenses" | "finance_incomes" | "suppliers" | "purchases" | "payroll" | "finance_payments" | "finance_accounts" | "sku_index" | "integrations" | "message_logs" | "courier_ledger" | "ad_costs";
+export type Col = "products" | "categories" | "banners" | "offers" | "orders" | "settings" | "zones" | "riders" | "stocklogs" | "images" | "nid" | "employees" | "attendance" | "couriers" | "payment_methods" | "ratings" | "issues" | "audit_logs" | "admins" | "customers" | "finance_expenses" | "finance_incomes" | "suppliers" | "purchases" | "payroll" | "finance_payments" | "finance_accounts" | "sku_index" | "integrations" | "message_logs" | "courier_ledger" | "ad_costs" | "reviews" | "product_layouts" | "seo_overrides";
 export const newId = () => randomBytes(8).toString("hex");
 
 /** Thrown by `placeOrder` when a product cannot be sold; services.ts turns it into a customer-facing ApiError. */
@@ -206,7 +206,7 @@ export const rawDb = { list: (c: Col) => driver().list(c), get: (c: Col, id: str
 
 /** Storefront data (products, categories, banners, offers, settings, zones) is cached; any write through `db` refreshes it at once. */
 export const STORE_TAG = "store";
-const STORE_COLS = new Set<Col>(["products", "categories", "banners", "offers", "settings", "zones"]);
+const STORE_COLS = new Set<Col>(["products", "categories", "banners", "offers", "settings", "zones", "product_layouts", "seo_overrides"]);
 const bust = (col: Col) => { if (STORE_COLS.has(col)) { try { revalidateTag(STORE_TAG); } catch { /* not inside a request: the 60 s timer refreshes it */ } } };
 
 export const db = {

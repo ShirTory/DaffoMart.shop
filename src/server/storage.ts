@@ -10,10 +10,10 @@ export const isOwnUpload = (u: string) => u.startsWith("/api/uploads/") || /^htt
 
 export const MAX_UPLOAD_BYTES = 4 * 1024 * 1024; // serverless hosts (Netlify/Vercel) reject request bodies of ~4.5-6 MB
 const ALLOWED = new Set(["jpeg", "png", "webp", "gif", "avif"]);
-const WIDTH: Record<string, number> = { product: 1200, banner: 2400, category: 600, offer: 1200, general: 1600 };
+const WIDTH: Record<string, number> = { review: 1000, product: 1200, banner: 2400, category: 600, offer: 1200, general: 1600 };
 
 const MAX_FRAMES = 400; // animated GIF / WebP safety cap
-const ANIM_WIDTH: Record<string, number> = { product: 800, banner: 1600, category: 400, offer: 1000, general: 1200 };
+const ANIM_WIDTH: Record<string, number> = { review: 800, product: 800, banner: 1600, category: 400, offer: 1000, general: 1200 };
 
 /** Encodes to WebP. Animated sources (GIF, animated WebP) keep every frame, timing and loop; still images are auto-rotated. */
 async function encode(buf: Buffer, width: number, quality: number, animated: boolean) {

@@ -1,13 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSettings } from "@/server/queries";
+import { getSeoMap, getSettings } from "@/server/queries";
 import { makeT } from "@/lib/texts";
-import { pageMeta } from "@/lib/seo";
+import { pageMeta, withSeo } from "@/lib/seo";
 export const revalidate = 60;
 
 export async function generateMetadata(): Promise<Metadata> {
-  const s = await getSettings();
-  return pageMeta({ title: makeT(s.texts)("policy.title"), description: `Return and exchange policy of ${s.storeName}.`, path: "/policy" });
+  const [s, seo] = await Promise.all([getSettings(), getSeoMap()]);
+  return pageMeta(withSeo({ title: makeT(s.texts)("policy.title"), description: `Return and exchange policy of ${s.storeName}.`, path: "/policy" }, seo.policy));
 }
 
 export default async function PolicyPage() {

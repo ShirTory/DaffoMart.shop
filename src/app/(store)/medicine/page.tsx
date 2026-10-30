@@ -3,8 +3,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProductCard from "@/components/store/ProductCard";
 import EmptyState from "@/components/store/EmptyState";
-import { getActiveProducts, getCategories, getSettings } from "@/server/queries";
-export const metadata: Metadata = { title: "Medicine & Healthcare", alternates: { canonical: "/medicine" } };
+import { pageMeta, withSeo } from "@/lib/seo";
+import { getActiveProducts, getCategories, getSeoMap, getSettings } from "@/server/queries";
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta(withSeo({ title: "Medicine & Healthcare", path: "/medicine" }, (await getSeoMap()).medicine));
+}
 
 type SP = { q?: string; cat?: string; rx?: string; sort?: string };
 export default async function MedicinePage({ searchParams }: { searchParams: Promise<SP> }) {

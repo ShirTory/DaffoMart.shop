@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getSettings, getZones } from "@/server/queries";
+import { getSeoMap, getSettings, getZones } from "@/server/queries";
 import { taka } from "@/lib/format";
 import { mapsEmbed } from "@/lib/maps";
+import { pageMeta, withSeo } from "@/lib/seo";
 import BrandIcon, { ICON_LABEL } from "@/components/store/BrandIcon";
-export const metadata: Metadata = { title: "Contact & Delivery", alternates: { canonical: "/contact" } };
+export async function generateMetadata(): Promise<Metadata> {
+  return pageMeta(withSeo({ title: "Contact & Delivery", path: "/contact" }, (await getSeoMap()).contact));
+}
 export const revalidate = 60; // served from cache, refreshed when the admin saves (and at most every 60 s)
 
 export default async function ContactPage() {

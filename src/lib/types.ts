@@ -32,6 +32,28 @@ export interface Product {
   featured: boolean; active: boolean; createdAt: string; updatedAt: string;
   /** Optional offer window for a discounted product (oldPrice > price). Empty = no time limit. YYYY-MM-DD, end date inclusive. */
   offerStartsAt?: string; offerEndsAt?: string;
+  /* ---- product page content (all optional: older products simply show less) ---- */
+  brand?: string; countryOfOrigin?: string; manufacturerInfo?: string;
+  /** description split into titled sections (features, benefits, how to use, important notes …) */
+  descSections?: DescSection[]; specs?: SpecRow[]; video?: ProductVideo;
+  /** extra photos (angles, close-ups), in the order the admin arranged them */
+  extraImages?: string[];
+  /** promotional labels shown on the card, e.g. "Eid special" */
+  badges?: string[];
+  /** hand-picked products for the two recommendation sections, in display order */
+  sameCategoryIds?: string[]; recommendedIds?: string[];
+  /** maintained from approved reviews: count, average (also in `rating`) and how many 1..5-star reviews */
+  reviewCount?: number; ratingDist?: number[];
+}
+export interface DescSection { id: string; title: string; body: string }
+export interface SpecRow { id: string; label: string; value: string }
+export interface ProductVideo { kind: "upload" | "external"; url: string; poster?: string; title?: string; enabled: boolean }
+export type ReviewStatus = "pending" | "approved" | "rejected" | "hidden";
+/** Stored review. `phone`, `orderId` are private and never leave the server in public responses. */
+export interface ProductReview {
+  id: string; productId: string; orderId: string; phone: string; name: string;
+  rating: number; title?: string; text: string; images: string[]; verified: true;
+  status: ReviewStatus; adminNote?: string; moderatedBy?: string; moderatedAt?: string; createdAt: string; updatedAt: string;
 }
 
 export interface Banner {
@@ -522,3 +544,6 @@ export interface AdCost {
   amountBdt: number; amountUsd?: number; usdRate?: number; /** orders the ad platform itself reports (never used as truth) */ reportedOrders?: number;
   status: AdStatus; note?: string; createdBy: string; createdAt: string; updatedAt: string;
 }
+
+/** Admin-edited SEO for one page. id = "home" | "products" | "offers" | "contact" | "policy" | "medicine" | "category:<id>" | "product:<id>". Empty fields fall back to the automatic values. */
+export interface SeoEntry { id: string; title?: string; description?: string; keywords?: string; image?: string; canonical?: string; noindex?: boolean; updatedAt: string; updatedBy: string }

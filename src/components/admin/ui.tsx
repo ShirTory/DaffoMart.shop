@@ -99,10 +99,10 @@ const STATUS_STYLE: Record<string, string> = {
 };
 export const StatusBadge = ({ status, label }: { status: string; label?: string }) => <span className={`badge ${STATUS_STYLE[status] ?? "bg-gray-100 text-gray-700"}`}>{label ?? statusLabel(status)}</span>;
 
-export function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label?: string }) {
+export function Toggle({ checked, onChange, label, disabled = false }: { checked: boolean; onChange: (v: boolean) => void; label?: string; disabled?: boolean }) {
   return (
-    <label className="inline-flex cursor-pointer items-center gap-2 text-sm">
-      <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-primary" : "bg-gray-300"}`}>
+    <label className={`inline-flex items-center gap-2 text-sm ${disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
+      <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)} className={`relative h-6 w-11 rounded-full transition ${checked ? "bg-primary" : "bg-gray-300"}`}>
         <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${checked ? "left-[22px]" : "left-0.5"}`} />
       </button>{label && <span className="text-gray-700">{label}</span>}
     </label>

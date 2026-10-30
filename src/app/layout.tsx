@@ -28,16 +28,24 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 export const viewport: Viewport = { themeColor: "#1E3A8A", width: "device-width", initialScale: 1 };
 
-// Tells Google the site's name (and the alternate name people may type) so search results show "DaffoMart" for this address.
-const siteSchema = [
-  { "@context": "https://schema.org", "@type": "WebSite", name: "DaffoMart", alternateName: ["daffomartshop", "DaffoMart Shop", "daffomart"], url: `${SITE_URL}/` },
-  { "@context": "https://schema.org", "@type": "Organization", name: "DaffoMart", url: `${SITE_URL}/`, logo: `${SITE_URL}/logo.png` },
-];
+// Tells Google the site's name (and the alternate name people may type), the internal search box and the official profiles. Values come from Admin → Settings.
+async function siteSchema() {
+  let s: Awaited<ReturnType<typeof getSettings>> | null = null;
+  try { s = await getSettings(); } catch { /* database unreachable: static fallback */ }
+  const name = s?.storeName || "DaffoMart";
+  const sameAs = [s?.facebook, s?.instagram, s?.youtube, s?.tiktok].filter((u): u is string => !!u && /^https?:\/\//i.test(u));
+  const logo = s?.iconImages?.logo || `${SITE_URL}/logo.png`;
+  return [
+    { "@context": "https://schema.org", "@type": "WebSite", name, alternateName: ["daffomartshop", "DaffoMart Shop", "daffomart"], url: `${SITE_URL}/`, potentialAction: { "@type": "SearchAction", target: { "@type": "EntryPoint", urlTemplate: `${SITE_URL}/products?q={search_term_string}` }, "query-input": "required name=search_term_string" } },
+    { "@context": "https://schema.org", "@type": "Organization", name, url: `${SITE_URL}/`, logo, ...(sameAs.length ? { sameAs } : {}), ...(s?.phone ? { contactPoint: { "@type": "ContactPoint", telephone: s.phone, contactType: "customer service", areaServed: "BD" } } : {}) },
+  ];
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteLd = await siteSchema();
   return (
     <html lang="en">
-      <head><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteSchema).replace(/</g, "\\u003c") }} /></head>
+      <head><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(siteLd).replace(/</g, "\\u003c") }} /></head>
       <body className="font-sans">
         <GoogleTagManager />{children}</body>
     </html>
