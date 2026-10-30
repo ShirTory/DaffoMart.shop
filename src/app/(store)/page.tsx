@@ -8,7 +8,7 @@ import Reveal from "@/components/store/Reveal";
 import DealBadge from "@/components/store/DealBadge";
 import GroceryBanner from "@/components/store/GroceryBanner";
 import MedicineCta from "@/components/store/MedicineCta";
-import Ticker from "@/components/store/Ticker";
+import AutoScrollRow from "@/components/store/AutoScrollRow";
 import OffersCarousel from "@/components/store/OffersCarousel";
 import { offerProducts } from "@/lib/offers";
 import { resolveTheme, TICKER_SECONDS_PER_ITEM } from "@/lib/storeTheme";
@@ -24,8 +24,12 @@ import type { Category, HomeSectionConfig, HomeSectionId, Product } from "@/lib/
 
 export const revalidate = 60;
 
+/** Offers and Super Deals (sale) come right after the hero banner. */
 const DEFAULT_SECTIONS: HomeSectionConfig[] = [
   { id: "hero", visible: true },
+  { id: "offerProducts", visible: true },
+  { id: "sale", visible: true },
+  { id: "offers", visible: true },
   { id: "features", visible: true },
   { id: "categories", visible: true },
   { id: "buyAgain", visible: true },
@@ -33,12 +37,11 @@ const DEFAULT_SECTIONS: HomeSectionConfig[] = [
   { id: "daily", visible: true },
   { id: "fresh", visible: true },
   { id: "household", visible: true },
-  { id: "offerProducts", visible: true },
-  { id: "offers", visible: true },
-  { id: "sale", visible: true },
   { id: "medicine", visible: true },
   { id: "new", visible: true },
 ];
+/** The order shipped before this change. A store that never reordered its home page still has exactly this saved, so it gets the new default. */
+const LEGACY_ORDER = ["hero", "features", "categories", "buyAgain", "best", "daily", "fresh", "household", "offerProducts", "offers", "sale", "medicine", "new"];
 
 const Section = ({ title, children, href, emoji, viewAll = "View all →", prominent }: { title: string; children: React.ReactNode; href?: string; emoji?: string; viewAll?: string; prominent?: boolean }) => (
   <section className="mt-6 sm:mt-8">
@@ -80,6 +83,10 @@ function byCats(products: Product[], catIds: string[] | undefined) {
 
 function resolveSections(cfg?: HomeSectionConfig[]): HomeSectionConfig[] {
   if (!cfg?.length) return DEFAULT_SECTIONS;
+  if (cfg.length === LEGACY_ORDER.length && cfg.every((c, i) => c?.id === LEGACY_ORDER[i])) {
+    const vis = new Map(cfg.map((c) => [c.id, c.visible !== false]));
+    return DEFAULT_SECTIONS.map((d) => ({ id: d.id, visible: vis.get(d.id) ?? true }));
+  }
   const seen = new Set<string>();
   const out: HomeSectionConfig[] = [];
   for (const s of cfg) {
@@ -202,7 +209,6 @@ export default async function Home() {
   };
 
   const title = (id: HomeSectionId, fallback: string) => theme.titles[id]?.trim() || fallback;
-  const tickRepeat = Math.max(1, Math.ceil(14 / Math.max(1, shopCats.length))); // one copy must be wider than the screen for a seamless loop
   const offerList = offerProducts(products, theme.offersLimit, nowMs);
   const offerProductsBlock = offerList.length > 0 ? (
     <Section title={title("offerProducts", "Offers")} href="/products?sale=1" viewAll={va} emoji="🏷️" prominent>
@@ -218,9 +224,7 @@ export default async function Home() {
           <div className={`grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm} [&>a]:!w-full`}>{shopCats.map(catCard)}</div>
         ) : theme.catTicker ? (
           // auto-moving strip (Admin → Website Theme); uses the same category cards as the grid
-          <Ticker label={title("categories", t("home.categories"))} seconds={shopCats.length * tickRepeat * TICKER_SECONDS_PER_ITEM[theme.catTickerSpeed]}>
-            {Array.from({ length: tickRepeat }, (_, r) => shopCats.map((c) => <div key={`${c.id}-${r}`} className="mr-2 flex">{catCard(c)}</div>))}
-          </Ticker>
+<AutoScrollRow label={title("categories", t("home.categories"))} className={`-mx-4 px-4 pb-2 pt-1 sm:mx-0 sm:px-0 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm}`}>{shopCats.map(catCard)}</AutoScrollRow>
         ) : (
           <div className={`no-scrollbar -mx-4 -mt-1 flex overflow-x-auto px-4 pb-2 pt-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 ${CAT_GAP[settings.catGap || "sm"] ?? CAT_GAP.sm}`}>{shopCats.map(catCard)}</div>
         )}

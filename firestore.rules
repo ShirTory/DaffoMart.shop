@@ -58,6 +58,8 @@ service cloud.firestore {
     match /finance_payments/{id} { allow read, write: if false; }
     match /finance_accounts/{id} { allow read, write: if false; }
     match /sku_index/{id} { allow read, write: if false; }
+    match /courier_ledger/{id} { allow read, write: if false; }
+    match /ad_costs/{id} { allow read, write: if false; }
     // WhatsApp / calling settings and message delivery logs: Admin SDK only (API tokens are never stored in Firestore — environment variables only)
     match /integrations/{id} { allow read, write: if false; }
     match /message_logs/{id} { allow read, write: if false; }

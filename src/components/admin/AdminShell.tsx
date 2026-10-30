@@ -16,6 +16,8 @@ const NAV: { href: string; label: string; icon: string; section?: string }[] = [
   { href: "/admin/finance/rider-earnings", label: "Rider Earnings", icon: "rider" },
   { href: "/admin/finance/purchases", label: "Purchases & Suppliers", icon: "inventory" },
   { href: "/admin/finance/balances", label: "Balances & Dues", icon: "trend" },
+  { href: "/admin/finance/courier", label: "Courier Accounts", icon: "delivery" },
+  { href: "/admin/finance/analytics", label: "Profit & Ads", icon: "trend" },
   { href: "/admin/issues", label: "Issues", icon: "alert" },
   { href: "/admin/products", label: "Products", icon: "products" },
   { href: "/admin/categories", label: "Categories", icon: "categories" },

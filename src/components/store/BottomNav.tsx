@@ -27,9 +27,9 @@ export default function BottomNav() {
           const badge = x.href === "/cart" ? count : x.href === "/wishlist" ? wish : 0;
           return (
             <Link key={x.href} href={x.href} className={`relative flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-semibold ${active ? "text-primary" : "text-gray-500"}`}>
-              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={x.icon} /></svg>
+              <svg viewBox="0 0 24 24" className={`h-6 w-6 ${x.href === "/cart" && mounted && count > 0 ? "cart-live rounded-full" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={x.icon} /></svg>
               {t(x.key)}
-              {mounted && badge > 0 && <span className="absolute right-[18%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">{badge}</span>}
+              {mounted && badge > 0 && <span key={badge} className="cart-badge-pop absolute right-[18%] top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-white">{badge}</span>}
             </Link>
           );
         })}

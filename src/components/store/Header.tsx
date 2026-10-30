@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Logo from "./Logo";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/lib/store";
 import { useWishlist } from "@/lib/wishlist";
 import type { Category, StoreSettings } from "@/lib/types";
@@ -60,6 +60,9 @@ export default function Header({ settings, categories }: { settings: StoreSettin
   const navLink = "hidden whitespace-nowrap rounded-full px-3.5 py-2 text-sm font-medium transition hover:bg-[var(--h-hover)]";
   const linkLook = settings.headerLinkBtn && Object.keys(settings.headerLinkBtn).length > 0 ? btnLookProps(settings.headerLinkBtn, { style: "plain", bg: "var(--h-muted)", size: "md", weight: "medium", radius: "full" }) : null;
   const SHOW = { lg: ["lg:block", "lg:inline-flex"], xl: ["xl:block", "xl:inline-flex"] } as const;
+  const [bump, setBump] = useState(false); const prevCount = useRef(count);
+  useEffect(() => { if (mounted && count > prevCount.current) { setBump(true); const id = setTimeout(() => setBump(false), 600); prevCount.current = count; return () => clearTimeout(id); } prevCount.current = count; }, [count, mounted]);
+  const with3d = <T extends { className?: string }>(p: T): T => ({ ...p, className: `${p.className ?? ""} btn-3d` });
   const linkProps = (bp: "lg" | "xl") => linkLook
     ? { className: `${linkLook.className.replace("inline-flex", "hidden")} ${SHOW[bp][1]}`, style: linkLook.style }
     : { className: `${navLink} ${SHOW[bp][0]}`, style: { color: "var(--h-muted)" } as React.CSSProperties };
@@ -98,8 +101,8 @@ export default function Header({ settings, categories }: { settings: StoreSettin
               {t("header.medicine")}
             </Link>
           )}
-          {on(settings.headerShowOrders) && <Link href="/orders" {...linkProps("lg")}>{t("header.orders")}</Link>}
-          {on(settings.headerShowTrack) && <Link href="/track" {...linkProps("lg")}>{t("header.track")}</Link>}
+          {on(settings.headerShowOrders) && <Link href="/orders" {...with3d(linkProps("lg"))}>{t("header.orders")}</Link>}
+          {on(settings.headerShowTrack) && <Link href="/track" {...with3d(linkProps("lg"))}>{t("header.track")}</Link>}
           {on(settings.headerShowContact, false) && <Link href="/contact" {...linkProps("xl")}>{t("header.contact")}</Link>}
           <NotificationBell />
           {flags.showWishlist && (
@@ -108,10 +111,10 @@ export default function Header({ settings, categories }: { settings: StoreSettin
               {mounted && wishCount > 0 && <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold leading-none text-white ring-2 ring-[color:var(--h-bg)]">{wishCount}</span>}
             </Link>
           )}
-          <Link href="/cart" aria-label="Cart" className={`${cart.className} ${CART_SQ[settings.headerCartBtn?.size || "md"] ?? CART_SQ.md} relative ml-1`} style={cart.style}>
+          <Link href="/cart" aria-label={count > 0 ? `Cart, ${count} items` : "Cart"} className={`${cart.className} ${CART_SQ[settings.headerCartBtn?.size || "md"] ?? CART_SQ.md} relative ml-1 ${bump ? "cart-bump" : ""} ${mounted && count > 0 ? "cart-live" : ""}`} style={cart.style}>
             <Icon d={CART} className="h-5 w-5" />
             <span className="hidden sm:inline">{t("header.cart")}</span>
-            {mounted && count > 0 && <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-deeper px-1 text-[11px] font-bold leading-none text-white ring-2 ring-[color:var(--h-bg)]">{count}</span>}
+            {mounted && count > 0 && <span key={count} className="cart-badge-pop absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary-deeper px-1 text-[11px] font-bold leading-none text-white ring-2 ring-[color:var(--h-bg)]">{count}</span>}
           </Link>
         </div>
       </div>

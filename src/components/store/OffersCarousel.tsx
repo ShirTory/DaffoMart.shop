@@ -18,9 +18,6 @@ export default function OffersCarousel({ products, whatsapp, dealCfg, speed = "n
         {ends && <p className="mt-1 text-center text-[11px] font-semibold text-red-600">⏱ {ends}</p>}
       </div>);
   };
-  // Fewer than 4 offers: a looping strip would just show duplicates, so show them statically.
-  if (products.length < 4) return <div className="flex flex-wrap gap-3">{products.map((p) => card(p, p.id))}</div>;
-  const repeat = Math.max(1, Math.ceil(9 / products.length));
-  const set = Array.from({ length: repeat }, (_, r) => products.map((p) => card(p, `${p.id}-${r}`)));
-  return <Ticker label={label} seconds={products.length * repeat * TICKER_SECONDS_PER_ITEM[speed] * 1.6}>{set}</Ticker>;
+  // Each offer is rendered once. The strip moves right → left only when it is wider than the screen (Ticker measures this); otherwise it is shown still.
+  return <Ticker direction="rtl" label={label} seconds={Math.max(10, products.length * TICKER_SECONDS_PER_ITEM[speed] * 1.6)}>{products.map((p) => card(p, p.id))}</Ticker>;
 }

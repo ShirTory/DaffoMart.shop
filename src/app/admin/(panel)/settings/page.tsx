@@ -16,6 +16,7 @@ interface Sys {
 type Extra = {
   returnPolicy: string; exchangePolicy: string; courierOutsideNote: string; metaPixelId: string;
   appPromptEnabled: boolean;
+  instagram: string; youtube: string; tiktok: string; iconImages: Record<string, string>;
   appPromptTitle: string;
   appPromptText: string;
   appPromptImage: string;
@@ -45,6 +46,7 @@ export default function SettingsPage() {
       courierOutsideNote: data.courierOutsideNote || "",
       metaPixelId: data.metaPixelId || "",
       appPromptEnabled: data.appPromptEnabled === true,
+      instagram: data.instagram || "", youtube: data.youtube || "", tiktok: data.tiktok || "", iconImages: data.iconImages || {},
       appPromptTitle: data.appPromptTitle || "",
       appPromptText: data.appPromptText || "",
       appPromptImage: data.appPromptImage || "",
@@ -74,6 +76,8 @@ export default function SettingsPage() {
         courierOutsideNote: x.courierOutsideNote,
         metaPixelId: x.metaPixelId,
         appPromptEnabled: x.appPromptEnabled,
+        instagram: x.instagram, youtube: x.youtube, tiktok: x.tiktok,
+        iconImages: Object.fromEntries(Object.entries(x.iconImages).filter(([, v]) => v)),
         appPromptTitle: x.appPromptTitle || undefined,
         appPromptText: x.appPromptText || undefined,
         appPromptImage: x.appPromptImage || undefined,
@@ -133,7 +137,22 @@ export default function SettingsPage() {
               <Field label="Facebook URL"><input className="input" value={f.facebook} onChange={set("facebook")} /></Field>
               <Field label="Google Maps link"><input className="input" value={f.mapUrl} onChange={set("mapUrl")} /></Field>
             </div>
+
           </section>
+        <section className="card space-y-4 p-5 lg:col-span-2">
+          <h2 className="font-bold">Social links &amp; icons</h2>
+          <p className="text-xs text-gray-500">Links must start with https://. Upload your own icon image to replace the built-in icon (square PNG/SVG/WebP works best). Leave empty to keep the built-in icon. Icons appear in the footer, contact page and floating Call / WhatsApp buttons.</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Instagram URL"><input className="input" value={x.instagram} onChange={setXStr("instagram")} placeholder="https://instagram.com/…" /></Field>
+            <Field label="YouTube URL"><input className="input" value={x.youtube} onChange={setXStr("youtube")} placeholder="https://youtube.com/…" /></Field>
+            <Field label="TikTok URL"><input className="input" value={x.tiktok} onChange={setXStr("tiktok")} placeholder="https://tiktok.com/@…" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {([["facebook", "Facebook"], ["instagram", "Instagram"], ["youtube", "YouTube"], ["tiktok", "TikTok"], ["whatsapp", "WhatsApp"], ["phone", "Call"], ["email", "Email"], ["address", "Address"], ["cod", "Cash on delivery"], ["bkash", "bKash"], ["nagad", "Nagad"], ["online", "Online payment"]] as const).map(([k, l]) => (
+              <ImageUpload key={k} kind="general" label={l} aspect="aspect-square" fit="contain" value={x.iconImages[k]} onChange={(v) => setX({ ...x, iconImages: { ...x.iconImages, [k]: v || "" } })} />
+            ))}
+          </div>
+        </section>
 
           <section className="card space-y-2 p-5">
             <h2 className="font-bold">Looking for colours, buttons, call / WhatsApp buttons or empty messages?</h2>

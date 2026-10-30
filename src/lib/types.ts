@@ -165,6 +165,8 @@ export interface CustomerProfile {
 export interface StoreSettings {
   storeName: string; tagline: string; phone: string; email: string; address: string;
   announcement: string; facebook: string; whatsapp: string;
+  /** extra social links + admin-uploaded icon images (keys: facebook, instagram, youtube, tiktok, whatsapp, phone, email, address, cod, bkash, nagad, online, or a custom payment-method id) */
+  instagram?: string; youtube?: string; tiktok?: string; iconImages?: Record<string, string>;
   /** announcement bar look (Admin → Appearance) */
   announcementIcon?: string; announcementLink?: string; announcementBg?: string; announcementColor?: string;
   announcementStyle?: "static" | "marquee" | "bounce" | "rotate"; announcementSpeed?: "slow" | "normal" | "fast"; announcementWeight?: "normal" | "semibold" | "bold" | "black"; announcementDirection?: "left" | "right"; announcementSep?: string; announcementSize?: "sm" | "md" | "lg"; announcementDismissible?: boolean; announcementCta?: string;
@@ -498,4 +500,25 @@ export interface MessageLog {
   id: string; channel: "whatsapp"; kind: WaTemplateKind | "test"; orderId?: string; orderNo?: string;
   to: string; status: MessageStatus; providerMessageId?: string; httpStatus?: number; error?: string; reason?: string;
   createdAt: string; updatedAt: string;
+}
+
+
+/* ---------- Courier accounts & advertising analytics (additive: two new collections) ---------- */
+export type ChargePayer = "customer" | "company";
+export type ReturnState = "none" | "in_transit" | "returned";
+export interface CourierAuditEntry { at: string; by: string; action: "create" | "edit" | "verify" | "unverify"; reason?: string; changes: Record<string, [unknown, unknown]> }
+/** One record per parcel; id = order id (so a parcel can never be recorded twice). Only what the admin entered/verified is stored; everything else is derived from the order. */
+export interface CourierParcel {
+  id: string; codAmount?: number; amountReceived: number;
+  deliveryCharge: number; deliveryChargePaidBy: ChargePayer; returnStatus: ReturnState; returnCharge: number; returnChargePaidBy: ChargePayer;
+  /** date the courier cost belongs to (YYYY-MM-DD); defaults to the delivery/update day of the order */
+  costDate?: string; settlementRef?: string; note?: string;
+  verified: boolean; verifiedAt?: string; verifiedBy?: string;
+  audit: CourierAuditEntry[]; createdAt: string; updatedAt: string;
+}
+export type AdStatus = "actual" | "estimated" | "unverified";
+export interface AdCost {
+  id: string; date: string; platform: string; campaign: string; productId?: string; productName?: string;
+  amountBdt: number; amountUsd?: number; usdRate?: number; /** orders the ad platform itself reports (never used as truth) */ reportedOrders?: number;
+  status: AdStatus; note?: string; createdBy: string; createdAt: string; updatedAt: string;
 }

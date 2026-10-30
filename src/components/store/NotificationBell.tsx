@@ -25,7 +25,7 @@ export default function NotificationBell({ announcement }: { announcement?: stri
   const n = items.length;
   return (
     <div className="relative">
-      <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-full transition hover:bg-[var(--h-hover)]" aria-label={n ? `Notifications, ${n} new` : "Notifications"} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((v) => !v)}>
+      <button type="button" className="btn-3d relative flex h-10 w-10 items-center justify-center rounded-full" aria-label={n ? `Notifications, ${n} new` : "Notifications"} aria-expanded={open} aria-haspopup="true" onClick={() => setOpen((v) => !v)}>
         <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0" />
         </svg>

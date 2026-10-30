@@ -115,6 +115,8 @@ export const settingsSchema = z.object({
   email: z.string().trim().max(120).default(""),
   address: z.string().trim().max(240).default(""),
   facebook: z.string().trim().max(240).default(""),
+  instagram: z.string().trim().max(240).optional(), youtube: z.string().trim().max(240).optional(), tiktok: z.string().trim().max(240).optional(),
+  iconImages: z.record(z.string().regex(/^[a-z0-9_-]{1,40}$/i), z.string().trim().max(400).refine((v) => v === "" || /^https:\/\//i.test(v) || v.startsWith("/"), "Use an uploaded image or an https:// link")).optional(),
   hours: z.string().trim().max(160).default(""),
   mapUrl: z.string().trim().max(600).default(""),
   announcement: z.string().trim().max(600).default(""),

@@ -114,7 +114,7 @@ test("rider earnings: re-saving a delivered order does not duplicate the earning
   const r = await mkRider({ payTerms: [{ from: "2026-01-01", perDelivery: 50, commissionPct: 0 }] });
   const o = await mkOrder({ riderId: r.id, delivery: 40, total: 300, deliveredAt: "2026-04-10T06:00:00.000Z" });
   await db.put("orders", { ...o, note: "touched again", updatedAt: "2026-04-20T06:00:00.000Z" }); // reprocessed
-  await db.update("orders", o.id, { status: "delivered" });
+  await db.update("orders", o.id, { status: "delivered" } as any);
   assert.equal((await acc.riderStatement(r.id, "2026-04-01", "2026-04-30")).earned, 50);
   await acc.recordPayment({ kind: "rider", refId: r.id, amount: 20, date: "2026-04-25", by: "t" });
   const s = await acc.riderStatement(r.id, "2026-04-01", "2026-04-30");
@@ -246,7 +246,7 @@ test("receivables: a partial customer collection reduces the dues, and marking t
   assert.equal(await fail(() => acc.recordPayment({ kind: "receivable", refId: o.id, amount: 601, date: "2025-04-12", by: "t" })), 409);
   let cf = await acc.cashflowFull("2025-04-01", "2025-04-30");
   assert.equal(cf.totalIn, 400);
-  await db.update("orders", o.id, { paymentStatus: "paid" });
+  await db.update("orders", o.id, { paymentStatus: "paid" } as any);
   cf = await acc.cashflowFull("2025-04-01", "2025-04-30");
   assert.equal(cf.totalIn, 1000, "400 collected + 600 remainder = 1000, counted once");
   assert.equal(await fail(() => acc.recordPayment({ kind: "receivable", refId: o.id, amount: 1, date: "2025-04-13", by: "t" })), 409);

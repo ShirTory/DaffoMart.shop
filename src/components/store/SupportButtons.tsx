@@ -1,6 +1,7 @@
 "use client";
 import type { StoreSettings } from "@/lib/types";
 import { validHex } from "@/lib/theme";
+import BrandIcon from "./BrandIcon";
 
 /**
  * Floating Call / WhatsApp controls.
@@ -42,9 +43,7 @@ export default function SupportButtons({ settings }: { settings: StoreSettings }
           className="flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold text-white shadow-lg transition hover:scale-105 active:scale-95 sm:h-auto sm:py-2.5"
           style={{ background: validHex(settings.supportWaColor) || "#25D366" }}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.4A8.4 8.4 0 1 1 21 11.5z" />
-          </svg>
+          {settings.iconImages?.whatsapp ? <BrandIcon k="whatsapp" settings={settings} size="h-7 w-7" /> : <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20.5l1.7-5.4A8.4 8.4 0 1 1 21 11.5z" /></svg>}
           <span className="hidden sm:inline">{waLabel}</span>
         </a>
       )}
@@ -55,9 +54,7 @@ export default function SupportButtons({ settings }: { settings: StoreSettings }
           className="flex h-11 min-w-11 items-center justify-center gap-2 rounded-full px-3.5 text-sm font-bold text-white shadow-lg transition hover:scale-105 active:scale-95 sm:h-auto sm:py-2.5"
           style={{ background: validHex(settings.supportCallColor) || "rgb(var(--c-primary))" }}
         >
-          <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-            <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" />
-          </svg>
+          {settings.iconImages?.phone ? <BrandIcon k="phone" settings={settings} size="h-7 w-7" /> : <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.1-8.7A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.3 1.8.6 2.6a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.5-1.1a2 2 0 0 1 2.1-.4c.8.3 1.7.5 2.6.6a2 2 0 0 1 1.7 2z" /></svg>}
           <span className="hidden sm:inline">{callLabel}</span>
         </a>
       )}

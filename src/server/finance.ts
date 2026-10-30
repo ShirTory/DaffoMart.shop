@@ -215,7 +215,10 @@ export async function createExpense(data: Omit<FinanceExpense, "id" | "createdAt
   return rec;
 }
 
+const assertNotCourier = (id: string) => { if (id.startsWith("courier:")) throw new ApiError(409, "This expense is posted by Courier Accounts. Correct it there (Finance → Courier Accounts) so the audit history stays complete."); };
+
 export async function updateExpense(id: string, data: Partial<FinanceExpense>) {
+  assertNotCourier(id);
   const prev = await db.get<FinanceExpense>("finance_expenses", id);
   if (!prev) throw new ApiError(404, "Expense not found");
   if (data.category && data.category !== prev.category) assertNotPayroll(data.category);
@@ -236,6 +239,7 @@ export async function updateExpense(id: string, data: Partial<FinanceExpense>) {
 }
 
 export async function deleteExpense(id: string) {
+  assertNotCourier(id);
   const prev = await db.get<FinanceExpense>("finance_expenses", id);
   if (!prev) throw new ApiError(404, "Expense not found");
   await db.remove("finance_expenses", id);

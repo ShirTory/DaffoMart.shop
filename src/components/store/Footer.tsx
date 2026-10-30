@@ -3,6 +3,7 @@ import type { Category, StoreSettings } from "@/lib/types";
 import { paymentOptions } from "@/server/payments";
 import { makeT } from "@/lib/texts";
 import { validHex } from "@/lib/theme";
+import BrandIcon, { ICON_LABEL } from "./BrandIcon";
 
 // Compact marketing poster: slim on every screen so the footer stays short.
 const PROMO_H: Record<string, string> = { sm: "h-14 sm:h-20", md: "h-20 sm:h-28", lg: "h-28 sm:h-36" };
@@ -12,6 +13,8 @@ export default async function Footer({ settings: s }: { settings: StoreSettings;
   const t = makeT(s.texts);
   // only methods that really work right now (a gateway that is not connected yet is not shown as a way to pay)
   const payments = s.footerShowPayments === false ? [] : (await paymentOptions(s)).filter((p) => !p.disabled);
+  const wa = (s.whatsapp || "").replace(/\D/g, "");
+  const socials = (["facebook", "instagram", "youtube", "tiktok"] as const).map((k) => [k, (s[k] || "").trim()] as const).filter(([, v]) => /^https?:\/\//i.test(v));
   const promo = s.footerPromoShow !== false && s.footerPromoImage ? s.footerPromoImage : "";
   const promoBg = validHex(s.footerPromoBg);
   const promoImg = (
@@ -39,22 +42,30 @@ export default async function Footer({ settings: s }: { settings: StoreSettings;
         <div>
           <h4 className="mb-3 font-semibold">{t("footer.contact")}</h4>
           <ul className="space-y-2 text-white/70">
-            {s.address && <li>📍 {s.address}</li>}
-            {s.phone && <li><a className="hover:text-white" href={`tel:${s.phone.replace(/\s/g, "")}`}>📞 {s.phone}</a></li>}
-            {s.email && <li><a className="hover:text-white" href={`mailto:${s.email}`}>✉️ {s.email}</a></li>}
-            {s.facebook && <li><a className="hover:text-white" href={s.facebook} target="_blank" rel="noopener noreferrer">Facebook</a></li>}
+            {s.address && <li className="flex items-start gap-2"><BrandIcon k="address" settings={s} size="h-7 w-7" /><span className="pt-1">{s.address}</span></li>}
+            {s.phone && <li><a className="flex items-center gap-2 hover:text-white" href={`tel:${s.phone.replace(/[^\d+]/g, "")}`}><BrandIcon k="phone" settings={s} size="h-7 w-7" /><span>{s.phone}</span></a></li>}
+            {wa.length >= 8 && <li><a className="flex items-center gap-2 hover:text-white" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer"><BrandIcon k="whatsapp" settings={s} size="h-7 w-7" /><span>WhatsApp</span></a></li>}
+            {s.email && <li><a className="flex items-center gap-2 hover:text-white" href={`mailto:${s.email}`}><BrandIcon k="email" settings={s} size="h-7 w-7" /><span className="break-all">{s.email}</span></a></li>}
           </ul>
+          {socials.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-2" aria-label="Social media">
+              {socials.map(([k, href]) => <a key={k} href={href} target="_blank" rel="noopener noreferrer" aria-label={ICON_LABEL[k]} className="transition hover:scale-105 active:scale-95"><BrandIcon k={k} settings={s} size="h-10 w-10" /></a>)}
+            </div>
+          )}
         </div>
         {payments.length > 0 && (
           <div>
             <h4 className="mb-3 font-semibold">Payment methods</h4>
             <div className="flex flex-wrap gap-2" aria-label="Payment methods">
-              {payments.map((p) => p.logo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <span key={p.id} className="flex h-9 items-center rounded-md bg-white px-2.5"><img src={p.logo} alt={p.label} className="h-6 w-auto max-w-[72px] object-contain" loading="lazy" /></span>
-              ) : (
-                <span key={p.id} className="rounded-md px-3 py-1.5 text-xs font-semibold text-white" style={{ background: validHex(p.color) || "rgba(255,255,255,0.14)" }}>{p.label}</span>
-              ))}
+              {payments.map((p) => {
+                const img = p.logo || s.iconImages?.[p.id];
+                return img ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <span key={p.id} title={p.label} className="flex h-10 items-center rounded-lg bg-white px-2.5"><img src={img} alt={p.label} className="h-7 w-auto max-w-[80px] object-contain" loading="lazy" /></span>
+                ) : (
+                  <span key={p.id} title={p.label} className="flex h-10 items-center gap-1.5 rounded-lg bg-white pl-1 pr-2.5 text-xs font-bold text-gray-800"><BrandIcon k={p.id} settings={s} size="h-8 w-8" label={p.label} />{p.label}</span>
+                );
+              })}
             </div>
           </div>
         )}
